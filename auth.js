@@ -3,7 +3,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import Google from 'next-auth/providers/google'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -29,7 +29,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           user.password
         )
         if (!isValid) return null
-        return user
+        return { id: user.id, name: user.name, email: user.email, role: user.role, image: user.image }
       },
     }),
   ],
