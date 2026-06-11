@@ -6,7 +6,7 @@
 
 ## Project in One Sentence
 
-GoCart is a multi-vendor e-commerce marketplace (Next.js 15) where vendors manage their own stores, customers place COD orders, and admins oversee the platform — built toward a Shopify-like vision.
+GoCart is a multi-vendor e-commerce marketplace (Next.js 16) where vendors manage their own stores, customers place COD orders, and admins oversee the platform — built toward a Shopify-like vision.
 
 ---
 
@@ -14,11 +14,11 @@ GoCart is a multi-vendor e-commerce marketplace (Next.js 15) where vendors manag
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Next.js 15.3.5 (Turbopack), React 19 |
+| Framework | Next.js 16.2.9 (Turbopack), React 19.2.7, Node 24 |
 | Styling | Tailwind CSS v4 |
 | Admin + Vendor UI | TailAdmin free Next.js template (components copied in) |
 | Auth | Auth.js v5 (`next-auth@beta`) + Prisma adapter — roles: admin, vendor, customer |
-| ORM | Prisma + standard PostgreSQL driver |
+| ORM | Prisma 7.8.0 + `@prisma/adapter-pg` (generated at `prisma/generated/prisma/`) |
 | Database | PostgreSQL (local Docker, VPS later) |
 | Images | Cloudinary |
 | Payments | COD only (Stripe deferred) |
@@ -31,28 +31,29 @@ GoCart is a multi-vendor e-commerce marketplace (Next.js 15) where vendors manag
 
 | # | Phase | Status | Plan File |
 |---|-------|--------|-----------|
-| 0 | Auth Migration — Replace Clerk with Auth.js v5 + Prisma adapter | 🔄 In progress | `docs/superpowers/plans/` _(create next)_ |
-| 1 | Foundation — Clerk, PostgreSQL, Prisma, Cloudinary, middleware | ✅ Complete | `docs/superpowers/plans/2026-06-11-phase-1-foundation.md` |
-| 2 | Admin Panel — TailAdmin UI + 6 admin pages + API routes | 🔲 Not started | _(create when Phase 0 done)_ |
+| 0 | Auth Migration — Replace Clerk with Auth.js v5 + Prisma adapter | ✅ Complete | `docs/superpowers/plans/2026-06-11-nextauth-migration.md` |
+| 1 | Foundation — PostgreSQL, Prisma, Cloudinary, middleware | ✅ Complete | `docs/superpowers/plans/2026-06-11-phase-1-foundation.md` |
+| 2 | Admin Panel — TailAdmin UI + 6 admin pages + API routes | 🔲 Not started | _(create next)_ |
 | 3 | Vendor Dashboard — TailAdmin UI + 4 vendor pages + API routes | 🔲 Not started | _(create when Phase 2 done)_ |
 | 4 | Public Storefront — wire existing pages to real API routes | 🔲 Not started | _(create when Phase 3 done)_ |
 | 5 | Platform Services — Cloudinary uploads, coupon engine, ratings | 🔲 Not started | _(create when Phase 4 done)_ |
 
-**Current phase:** Phase 0 — Auth Migration (in progress)  
-**Last session ended:** 2026-06-11 — design spec approved, implementation plan written. Plan at `docs/superpowers/plans/2026-06-11-nextauth-migration.md`. 13 tasks. Implementation started via subagent-driven approach.
+**Current phase:** Phase 2 — Admin Panel (in progress)  
+**Last session ended:** 2026-06-12 — Task 8 complete. Created `app/admin/users/page.jsx` server component. 26/26 tests passing. 17 total git commits.
 
 ---
 
 ## Where We Left Off
 
-Phase 1 is complete. Now migrating auth from Clerk to Auth.js v5 before starting Phase 2.
+All infrastructure upgrades are complete. Stack is now Next.js 16.2.9 + React 19.2.7 + Node 24 + Prisma 7.8.0 + Auth.js v5. 14/14 tests passing.
 
-**Immediate next step:** Execute the auth migration plan at `docs/superpowers/plans/2026-06-11-nextauth-migration.md` task by task using subagent-driven-development skill.
+**Immediate next step:** Phase 2 — Admin Panel. Brainstorm with the brainstorming skill, then write a plan, then implement with subagent-driven-development.
 
-**Important — credentials needed in `.env.local` after migration:**
-- NextAuth: `NEXTAUTH_URL`, `NEXTAUTH_SECRET` (any random 32-char string)
-- Google OAuth: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (from Google Cloud Console)
-- Cloudinary keys: get from https://cloudinary.com → Dashboard
+**Before manual testing of auth:** Add Google OAuth credentials to `.env.local`:
+- `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (from Google Cloud Console)
+- To promote a user to admin: `UPDATE "User" SET role = 'admin' WHERE email = 'you@example.com';` then sign out/in
+
+**Node 24 switch (manual):** Run `nvm use 24` in your terminal — `.nvmrc` is set but nvm-windows doesn't auto-switch.
 
 ---
 
@@ -64,8 +65,17 @@ Phase 1 is complete. Now migrating auth from Clerk to Auth.js v5 before starting
 | `CONTEXT.md` | ← this file — session state |
 | `docs/PRD.md` | Product requirements |
 | `docs/superpowers/specs/2026-06-11-gocart-platform-design.md` | Full technical spec |
+| `docs/superpowers/specs/2026-06-11-nextauth-migration-design.md` | Auth.js v5 migration spec |
 | `docs/superpowers/plans/2026-06-11-phase-1-foundation.md` | Phase 1 step-by-step plan |
-| `prisma/schema.prisma` | DB schema — User, Product, Order, Store, Coupon, etc. |
+| `docs/superpowers/plans/2026-06-11-nextauth-migration.md` | Auth migration 13-task plan |
+| `auth.js` | NextAuth config — Google + Credentials providers, JWT callbacks |
+| `middleware.js` | Route protection — admin/vendor/customer role enforcement |
+| `lib/auth.js` | Server-side auth helpers — requireAdmin, requireVendor, getAuthUser |
+| `app/AuthProvider.jsx` | SessionProvider client wrapper for root layout |
+| `components/admin/ui/UserMenu.jsx` | Replaces Clerk UserButton in admin + vendor navbars |
+| `prisma/schema.prisma` | DB schema — User, Account, Session, VerificationToken, Product, Order, Store, Coupon, etc. |
+| `prisma.config.ts` | Prisma 7 CLI config — loads `.env.local`, sets datasource URL |
+| `prisma/generated/prisma/client.ts` | Generated Prisma client — do not edit; regenerate with `npx prisma generate` |
 | `assets/assets.js` | All current dummy/mock data — replaced phase by phase |
 
 ---
@@ -73,12 +83,16 @@ Phase 1 is complete. Now migrating auth from Clerk to Auth.js v5 before starting
 ## Current Codebase State
 
 - **All data is mocked** via `assets/assets.js` — no real DB calls yet (Phase 4 wires these)
-- **Auth is wired** — Clerk middleware protects `/admin/*`, `/store/*`, `/orders`
-- **No API routes** — none exist yet (Phases 2–4)
-- **11 tests passing** — Vitest configured with smoke, auth, cloudinary, prisma tests
-- **Docker PostgreSQL running** — `gocart_db` container, all schema tables created
-- **Prisma 6** — standard driver, `lib/prisma.js` singleton ready
-- **`.env.local` needs real Clerk + Cloudinary keys** before the app is functional
+- **Auth is fully wired** — Auth.js v5 (JWT strategy), Google + credentials providers, role-based middleware, custom sign-in page, UserMenu in admin/vendor navbars
+- **No feature API routes** — none exist yet (Phases 2–4); only `/api/auth/[...nextauth]` and `/api/auth/register`
+- **14 tests passing** — 5 test files: smoke, auth helpers, cloudinary, prisma, register endpoint
+- **Docker PostgreSQL running** — `gocart_db` container, schema pushed (User + Account + Session + VerificationToken + all Phase 1 models)
+- **Prisma 7** — `@prisma/adapter-pg`, generated client at `prisma/generated/prisma/`, config in `prisma.config.ts`
+- **Next.js 16.2.9** — `next lint` removed (now `eslint .`), `middleware.js` deprecated but functional (Auth.js v5 still in beta)
+- **Node 24** — `.nvmrc` set; run `nvm use 24` manually to switch
+- **`"type": "module"`** — package.json is full ESM; all source files already used `import`/`export`
+- **`.env.local` needs `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`** for Google OAuth; credentials sign-in works without it
+- **Zero Clerk imports** — `@clerk/nextjs` removed from package.json and all source files
 
 ### Existing Route Zones
 
@@ -95,6 +109,24 @@ components/store/   StoreLayout, StoreNavbar, StoreSidebar
 components/         Navbar, Footer, Hero, ProductCard, Banner, etc.
 lib/features/       cartSlice, productSlice, addressSlice, ratingSlice (Redux)
 ```
+
+---
+
+## Phase 0 Checklist ✅ Complete — Auth Migration
+
+- [x] Task 1 — Swap `@clerk/nextjs` for `next-auth@beta`, `@auth/prisma-adapter`, `bcryptjs`
+- [x] Task 2 — Update Prisma schema: User model + Account/Session/VerificationToken; `npx prisma db push --force-reset`
+- [x] Task 3 — Create `auth.js` (NextAuth config: Google + Credentials, JWT callbacks, minimal user projection)
+- [x] Task 4 — Create `app/api/auth/[...nextauth]/route.js` (handler export)
+- [x] Task 5 — Create `app/api/auth/register/route.js` (bcrypt registration endpoint)
+- [x] Task 6 — Replace `middleware.js` (Clerk → Auth.js, role-based protection)
+- [x] Task 7 — Replace `lib/auth.js` helpers (requireAdmin, requireVendor, getAuthUser)
+- [x] Task 8 — Create `app/AuthProvider.jsx` + update `app/layout.jsx` (ClerkProvider → AuthProvider)
+- [x] Task 9 — Create `components/admin/ui/UserMenu.jsx` (Clerk UserButton replacement)
+- [x] Task 10 — Update `components/admin/AdminNavbar.jsx` + `components/store/StoreNavbar.jsx`
+- [x] Task 11 — Replace `app/sign-in/[[...sign-in]]/page.jsx` (Clerk SignIn → custom form with tabs)
+- [x] Task 12 — Update `.env.local` / `.env.example` (swap Clerk vars for NextAuth + Google)
+- [x] Task 13 — Update tests: `__tests__/lib/auth.test.js` + `__tests__/api/register.test.js` (14/14 passing)
 
 ---
 
@@ -120,7 +152,7 @@ lib/features/       cartSlice, productSlice, addressSlice, ratingSlice (Redux)
 - Use `lib/prisma.js` singleton — never `new PrismaClient()` in a route handler
 - Shared UI primitives live in `components/admin/ui/` — used by both admin and vendor zones
 - COD only — no Stripe code
-- No `driverAdapters` in Prisma
+- Prisma 7: after schema changes run `npx prisma generate` then `npx prisma db push`; never edit `prisma/generated/` directly
 
 ---
 
@@ -145,3 +177,6 @@ At the end of every session, update:
 | NextAuth over Clerk | Self-hosted, no third-party dependency, full control over auth flow |
 | Cloudinary for images | Generous free tier, built-in CDN, simple Next.js integration |
 | Same repo for admin | Simpler — one deploy, shared Prisma schema |
+| Prisma 7 driver adapter | Required by Prisma 7 — `@prisma/adapter-pg` replaces built-in driver |
+| Node 24 | Active LTS (Node 22 entered Maintenance LTS April 2026) |
+| `"type": "module"` | Required by Prisma 7 generated client; all files already used ESM syntax |
