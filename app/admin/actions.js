@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
 
 const VALID_ORDER_STATUSES = ['ORDER_PLACED', 'PROCESSING', 'SHIPPED', 'DELIVERED']
+const VALID_STORE_STATUSES = ['approved', 'rejected', 'pending']
 
 export async function toggleStoreActive(storeId, isActive) {
   const admin = await requireAdmin()
@@ -25,6 +26,8 @@ export async function toggleStoreActive(storeId, isActive) {
 export async function approveStore(storeId, status) {
   const admin = await requireAdmin()
   if (!admin) return { error: 'Unauthorized' }
+
+  if (!VALID_STORE_STATUSES.includes(status)) return { error: 'Invalid status' }
 
   try {
     await prisma.store.update({

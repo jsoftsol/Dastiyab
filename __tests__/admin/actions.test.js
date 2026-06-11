@@ -72,6 +72,13 @@ describe('approveStore', () => {
       data: { status: 'rejected' },
     })
   })
+
+  it('returns error for invalid status', async () => {
+    requireAdmin.mockResolvedValue({ userId: 'u1', role: 'admin' })
+    const result = await approveStore('store_1', 'INVALID')
+    expect(result).toEqual({ error: 'Invalid status' })
+    expect(prisma.store.update).not.toHaveBeenCalled()
+  })
 })
 
 describe('createCoupon', () => {
