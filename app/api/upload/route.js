@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import cloudinary from '@/lib/cloudinary'
-import { requireVendor } from '@/lib/auth'
-import { requireAdmin } from '@/lib/auth'
+import { requireVendor, requireAdmin } from '@/lib/auth'
 
 export async function POST(request) {
   const vendor = await requireVendor()
