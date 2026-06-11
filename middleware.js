@@ -1,29 +1,27 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { auth } from '@/auth'
 import { NextResponse } from 'next/server'
 
-const isAdminRoute = createRouteMatcher(['/admin(.*)', '/api/admin(.*)'])
-const isVendorRoute = createRouteMatcher(['/store(.*)', '/api/store(.*)'])
-const isProtectedRoute = createRouteMatcher([
-  '/admin(.*)',
-  '/store(.*)',
-  '/api/admin(.*)',
-  '/api/store(.*)',
-  '/orders',
-])
+export default auth((req) => {
+  const session = req.auth
+  const { pathname } = req.nextUrl
+  const isApi = pathname.startsWith('/api/')
 
-export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
-    await auth.protect()
+  const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/api/admin')
+  const isVendorRoute = pathname.startsWith('/store') || pathname.startsWith('/api/store')
+  const isProtectedRoute = pathname === '/orders'
+
+  if ((isAdminRoute || isVendorRoute || isProtectedRoute) && !session) {
+    if (isApi) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.redirect(new URL('/sign-in', req.url))
   }
 
-  const { sessionClaims } = await auth()
-  const role = sessionClaims?.metadata?.role
-
-  if (isAdminRoute(req) && role !== 'admin') {
+  if (isAdminRoute && session?.user?.role !== 'admin') {
+    if (isApi) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     return NextResponse.redirect(new URL('/', req.url))
   }
 
-  if (isVendorRoute(req) && role !== 'vendor') {
+  if (isVendorRoute && session?.user?.role !== 'vendor') {
+    if (isApi) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     return NextResponse.redirect(new URL('/', req.url))
   }
 })
