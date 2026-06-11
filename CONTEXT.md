@@ -34,12 +34,12 @@ GoCart is a multi-vendor e-commerce marketplace (Next.js 16) where vendors manag
 | 0 | Auth Migration — Replace Clerk with Auth.js v5 + Prisma adapter | ✅ Complete | `docs/superpowers/plans/2026-06-11-nextauth-migration.md` |
 | 1 | Foundation — PostgreSQL, Prisma, Cloudinary, middleware | ✅ Complete | `docs/superpowers/plans/2026-06-11-phase-1-foundation.md` |
 | 2 | Admin Panel — TailAdmin UI + 6 admin pages + API routes | ✅ Complete | `docs/superpowers/plans/2026-06-12-phase-2-admin-panel.md` |
-| 3 | Vendor Dashboard — TailAdmin UI + 4 vendor pages + API routes | 🔲 Not started | _(create when Phase 2 done)_ |
+| 3 | Vendor Dashboard — TailAdmin UI + 4 vendor pages + API routes | 🔄 In progress | `docs/superpowers/plans/2026-06-12-phase-3-vendor-dashboard.md` |
 | 4 | Public Storefront — wire existing pages to real API routes | 🔲 Not started | _(create when Phase 3 done)_ |
 | 5 | Platform Services — Cloudinary uploads, coupon engine, ratings | 🔲 Not started | _(create when Phase 4 done)_ |
 
-**Current phase:** Phase 3 — Vendor Dashboard (not started)  
-**Last session ended:** 2026-06-12 — Phase 2 complete. All 6 admin pages wired to real Prisma data using Next.js 16 server components + Server Actions. 26/26 tests passing. 24 total git commits.
+**Current phase:** Phase 3 — Vendor Dashboard (in progress)  
+**Last session ended:** 2026-06-12 — Phase 3 design spec approved and committed. Writing implementation plan next.
 
 ---
 
@@ -47,7 +47,7 @@ GoCart is a multi-vendor e-commerce marketplace (Next.js 16) where vendors manag
 
 Phase 2 (Admin Panel) is complete. All 6 admin pages are wired to real PostgreSQL data using Next.js 16 server components + Server Actions. No API routes were created for admin — mutations go directly through `app/admin/actions.js`.
 
-**Immediate next step:** Phase 3 — Vendor Dashboard. Brainstorm with the brainstorming skill, then write a plan, then implement with subagent-driven-development.
+**Immediate next step:** Phase 3 — Vendor Dashboard. Design spec approved. Write implementation plan with writing-plans skill, then implement with subagent-driven-development.
 
 **Before manual testing of auth:** Add Google OAuth credentials to `.env.local`:
 - `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (from Google Cloud Console)
@@ -80,6 +80,8 @@ Phase 2 (Admin Panel) is complete. All 6 admin pages are wired to real PostgreSQ
 | `app/admin/actions.js` | All Server Actions for admin panel — toggleStoreActive, approveStore, createCoupon, deleteCoupon, updateOrderStatus |
 | `docs/superpowers/specs/2026-06-12-admin-panel-design.md` | Phase 2 design spec |
 | `docs/superpowers/plans/2026-06-12-phase-2-admin-panel.md` | Phase 2 implementation plan |
+| `docs/superpowers/specs/2026-06-12-vendor-dashboard-design.md` | Phase 3 design spec |
+| `app/store/actions.js` | All Server Actions for vendor panel mutations (Phase 3) |
 
 ---
 
