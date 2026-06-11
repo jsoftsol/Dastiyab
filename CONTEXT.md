@@ -34,20 +34,20 @@ GoCart is a multi-vendor e-commerce marketplace (Next.js 16) where vendors manag
 | 0 | Auth Migration — Replace Clerk with Auth.js v5 + Prisma adapter | ✅ Complete | `docs/superpowers/plans/2026-06-11-nextauth-migration.md` |
 | 1 | Foundation — PostgreSQL, Prisma, Cloudinary, middleware | ✅ Complete | `docs/superpowers/plans/2026-06-11-phase-1-foundation.md` |
 | 2 | Admin Panel — TailAdmin UI + 6 admin pages + API routes | ✅ Complete | `docs/superpowers/plans/2026-06-12-phase-2-admin-panel.md` |
-| 3 | Vendor Dashboard — TailAdmin UI + 4 vendor pages + API routes | 🔄 In progress | `docs/superpowers/plans/2026-06-12-phase-3-vendor-dashboard.md` |
+| 3 | Vendor Dashboard — TailAdmin UI + 4 vendor pages + Cloudinary upload | ✅ Complete | `docs/superpowers/plans/2026-06-12-phase-3-vendor-dashboard.md` |
 | 4 | Public Storefront — wire existing pages to real API routes | 🔲 Not started | _(create when Phase 3 done)_ |
-| 5 | Platform Services — Cloudinary uploads, coupon engine, ratings | 🔲 Not started | _(create when Phase 4 done)_ |
+| 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | 🔲 Not started | _(create when Phase 4 done)_ |
 
-**Current phase:** Phase 3 — Vendor Dashboard (in progress)  
-**Last session ended:** 2026-06-12 — Phase 3 design spec approved and committed. Writing implementation plan next.
+**Current phase:** Phase 4 — Public Storefront (not started)  
+**Last session ended:** 2026-06-12 — Phase 3 complete. All 5 vendor pages wired to real Prisma data, Cloudinary upload route wired, 45/45 tests passing.
 
 ---
 
 ## Where We Left Off
 
-Phase 2 (Admin Panel) is complete. All 6 admin pages are wired to real PostgreSQL data using Next.js 16 server components + Server Actions. No API routes were created for admin — mutations go directly through `app/admin/actions.js`.
+Phase 3 (Vendor Dashboard) is complete. All 5 vendor pages are wired to real PostgreSQL data via async server components + Server Actions. Cloudinary image upload route (`app/api/upload/route.js`) is live. 45/45 tests passing across 8 test files.
 
-**Immediate next step:** Phase 3 — Vendor Dashboard. Design spec approved. Write implementation plan with writing-plans skill, then implement with subagent-driven-development.
+**Immediate next step:** Phase 4 — Public Storefront. Wire existing public pages (`app/(public)/`) to real Prisma data — home, shop, product detail, cart, orders, create-store. Start with brainstorming skill.
 
 **Before manual testing of auth:** Add Google OAuth credentials to `.env.local`:
 - `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (from Google Cloud Console)
@@ -81,21 +81,24 @@ Phase 2 (Admin Panel) is complete. All 6 admin pages are wired to real PostgreSQ
 | `docs/superpowers/specs/2026-06-12-admin-panel-design.md` | Phase 2 design spec |
 | `docs/superpowers/plans/2026-06-12-phase-2-admin-panel.md` | Phase 2 implementation plan |
 | `docs/superpowers/specs/2026-06-12-vendor-dashboard-design.md` | Phase 3 design spec |
-| `app/store/actions.js` | All Server Actions for vendor panel mutations (Phase 3) |
+| `docs/superpowers/plans/2026-06-12-phase-3-vendor-dashboard.md` | Phase 3 implementation plan |
+| `app/store/actions.js` | All Server Actions for vendor mutations — createProduct, updateProduct, deleteProduct, toggleInStock, updateOrderStatus |
+| `app/api/upload/route.js` | Cloudinary image upload endpoint (POST, auth-guarded) |
 
 ---
 
 ## Current Codebase State
 
 - **Admin panel fully wired** — all 6 pages use real Prisma data; Server Actions handle all mutations
-- **Vendor dashboard still mocked** via `assets/assets.js` — Phase 3 wires these
+- **Vendor dashboard fully wired** — all 5 pages (dashboard, add-product, manage-product, edit-product, orders) use real Prisma data; Server Actions in `app/store/actions.js`
+- **Cloudinary upload live** — `app/api/upload/route.js` handles image uploads for vendor + admin; returns `secure_url`
 - **Public storefront still mocked** — Phase 4 wires these
 - **Auth is fully wired** — Auth.js v5 (JWT strategy), Google + credentials providers, role-based middleware, custom sign-in page, UserMenu in admin/vendor navbars
-- **No admin API routes** — mutations use Server Actions (`app/admin/actions.js`); only `/api/auth/[...nextauth]` and `/api/auth/register` exist
-- **26 tests passing** — 6 test files: smoke, auth helpers, cloudinary, prisma, register endpoint, admin actions
+- **No admin/vendor API routes** — mutations use Server Actions; only `/api/auth/*`, `/api/auth/register`, `/api/upload` exist
+- **45 tests passing** — 8 test files: smoke, auth helpers, cloudinary, prisma, register endpoint, admin actions, store actions, upload route
 - **Docker PostgreSQL running** — `gocart_db` container, schema pushed
 - **Prisma 7** — `@prisma/adapter-pg`, generated client at `prisma/generated/prisma/`, config in `prisma.config.ts`
-- **Next.js 16.2.9** — server components + Server Actions pattern throughout admin panel
+- **Next.js 16.2.9** — server components + Server Actions pattern throughout admin + vendor panels
 - **Node 24** — `.nvmrc` set; run `nvm use 24` manually to switch
 - **`"type": "module"`** — full ESM
 - **`.env.local` needs `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`** for Google OAuth
@@ -104,7 +107,7 @@ Phase 2 (Admin Panel) is complete. All 6 admin pages are wired to real PostgreSQ
 
 ```
 app/(public)/     — storefront: home, shop, product, cart, orders, pricing, create-store (mocked)
-app/store/        — vendor dashboard: dashboard, add-product, manage-product, orders (mocked)
+app/store/        — vendor dashboard: dashboard, add-product, manage-product, edit-product/[id], orders (REAL DATA)
 app/admin/        — admin panel: dashboard, stores, approve, coupons, orders, users (REAL DATA)
 ```
 
@@ -113,10 +116,15 @@ app/admin/        — admin panel: dashboard, stores, approve, coupons, orders, 
 components/admin/   AdminLayout, AdminNavbar, AdminSidebar, StoreInfo
                     ui/UserMenu.jsx
                     + per-page clients: StoresClient, ApproveClient, CouponsClient, OrdersClient
-components/store/   StoreLayout, StoreNavbar, StoreSidebar
+components/store/   StoreLayout (wired to real auth + store), StoreNavbar, StoreSidebar
+                    + per-page clients: ManageProductClient, OrdersClient
 components/         Navbar, Footer, Hero, ProductCard, Banner, etc.
 lib/features/       cartSlice, productSlice, addressSlice, ratingSlice (Redux)
-app/admin/          actions.js — all Server Actions for admin panel mutations
+app/admin/          actions.js — Server Actions for admin mutations
+app/store/          actions.js — Server Actions for vendor mutations
+app/api/upload/     route.js — Cloudinary image upload (vendor + admin auth)
+app/store/add-product/    AddProductClient.jsx
+app/store/edit-product/[id]/  EditProductClient.jsx
 ```
 
 ---
@@ -165,6 +173,20 @@ app/admin/          actions.js — all Server Actions for admin panel mutations
 - [x] Task 7 — `app/admin/orders/page.jsx` + `OrdersClient.jsx` — new page, update order status
 - [x] Task 8 — `app/admin/users/page.jsx` — new view-only server component
 - [x] Tests — 26/26 passing (added 12 new tests for Server Actions)
+
+---
+
+## Phase 3 Checklist ✅ Complete — Vendor Dashboard
+
+- [x] Task 1 — `app/store/actions.js` — 5 Server Actions (createProduct, updateProduct, deleteProduct, toggleInStock, updateOrderStatus) with `requireVendor` guard + ownership enforcement
+- [x] Task 2 — `app/api/upload/route.js` — Cloudinary upload endpoint, auth-guarded (vendor or admin), returns `{ url: secure_url }`
+- [x] Task 3 — `components/store/StoreLayout.jsx` — converted to async server component, real auth + store lookup, redirects if no session/store
+- [x] Task 4 — `app/store/page.jsx` — async server component, 5 parallel Prisma queries (counts, earnings, recent ratings), date serialization
+- [x] Task 5 — `app/store/add-product/page.jsx` + `AddProductClient.jsx` — 4 image slots, upload to `/api/upload`, calls `createProduct`
+- [x] Task 6 — `app/store/manage-product/page.jsx` + `ManageProductClient.jsx` — product table with toggle + delete + edit link
+- [x] Task 7 — `app/store/edit-product/[id]/page.jsx` + `EditProductClient.jsx` — pre-populated form with image replacement, calls `updateProduct`
+- [x] Task 8 — `app/store/orders/page.jsx` + `OrdersClient.jsx` — orders table with status dropdown + order detail modal
+- [x] Tests — 45/45 passing (added 15 store action tests + 3 upload route tests)
 
 ---
 
