@@ -33,21 +33,21 @@ GoCart is a multi-vendor e-commerce marketplace (Next.js 16) where vendors manag
 |---|-------|--------|-----------|
 | 0 | Auth Migration — Replace Clerk with Auth.js v5 + Prisma adapter | ✅ Complete | `docs/superpowers/plans/2026-06-11-nextauth-migration.md` |
 | 1 | Foundation — PostgreSQL, Prisma, Cloudinary, middleware | ✅ Complete | `docs/superpowers/plans/2026-06-11-phase-1-foundation.md` |
-| 2 | Admin Panel — TailAdmin UI + 6 admin pages + API routes | 🔲 Not started | _(create next)_ |
+| 2 | Admin Panel — TailAdmin UI + 6 admin pages + API routes | ✅ Complete | `docs/superpowers/plans/2026-06-12-phase-2-admin-panel.md` |
 | 3 | Vendor Dashboard — TailAdmin UI + 4 vendor pages + API routes | 🔲 Not started | _(create when Phase 2 done)_ |
 | 4 | Public Storefront — wire existing pages to real API routes | 🔲 Not started | _(create when Phase 3 done)_ |
 | 5 | Platform Services — Cloudinary uploads, coupon engine, ratings | 🔲 Not started | _(create when Phase 4 done)_ |
 
-**Current phase:** Phase 2 — Admin Panel (in progress)  
-**Last session ended:** 2026-06-12 — Task 8 complete. Created `app/admin/users/page.jsx` server component. 26/26 tests passing. 17 total git commits.
+**Current phase:** Phase 3 — Vendor Dashboard (not started)  
+**Last session ended:** 2026-06-12 — Phase 2 complete. All 6 admin pages wired to real Prisma data using Next.js 16 server components + Server Actions. 26/26 tests passing. 24 total git commits.
 
 ---
 
 ## Where We Left Off
 
-All infrastructure upgrades are complete. Stack is now Next.js 16.2.9 + React 19.2.7 + Node 24 + Prisma 7.8.0 + Auth.js v5. 14/14 tests passing.
+Phase 2 (Admin Panel) is complete. All 6 admin pages are wired to real PostgreSQL data using Next.js 16 server components + Server Actions. No API routes were created for admin — mutations go directly through `app/admin/actions.js`.
 
-**Immediate next step:** Phase 2 — Admin Panel. Brainstorm with the brainstorming skill, then write a plan, then implement with subagent-driven-development.
+**Immediate next step:** Phase 3 — Vendor Dashboard. Brainstorm with the brainstorming skill, then write a plan, then implement with subagent-driven-development.
 
 **Before manual testing of auth:** Add Google OAuth credentials to `.env.local`:
 - `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (from Google Cloud Console)
@@ -77,37 +77,44 @@ All infrastructure upgrades are complete. Stack is now Next.js 16.2.9 + React 19
 | `prisma.config.ts` | Prisma 7 CLI config — loads `.env.local`, sets datasource URL |
 | `prisma/generated/prisma/client.ts` | Generated Prisma client — do not edit; regenerate with `npx prisma generate` |
 | `assets/assets.js` | All current dummy/mock data — replaced phase by phase |
+| `app/admin/actions.js` | All Server Actions for admin panel — toggleStoreActive, approveStore, createCoupon, deleteCoupon, updateOrderStatus |
+| `docs/superpowers/specs/2026-06-12-admin-panel-design.md` | Phase 2 design spec |
+| `docs/superpowers/plans/2026-06-12-phase-2-admin-panel.md` | Phase 2 implementation plan |
 
 ---
 
 ## Current Codebase State
 
-- **All data is mocked** via `assets/assets.js` — no real DB calls yet (Phase 4 wires these)
+- **Admin panel fully wired** — all 6 pages use real Prisma data; Server Actions handle all mutations
+- **Vendor dashboard still mocked** via `assets/assets.js` — Phase 3 wires these
+- **Public storefront still mocked** — Phase 4 wires these
 - **Auth is fully wired** — Auth.js v5 (JWT strategy), Google + credentials providers, role-based middleware, custom sign-in page, UserMenu in admin/vendor navbars
-- **No feature API routes** — none exist yet (Phases 2–4); only `/api/auth/[...nextauth]` and `/api/auth/register`
-- **14 tests passing** — 5 test files: smoke, auth helpers, cloudinary, prisma, register endpoint
-- **Docker PostgreSQL running** — `gocart_db` container, schema pushed (User + Account + Session + VerificationToken + all Phase 1 models)
+- **No admin API routes** — mutations use Server Actions (`app/admin/actions.js`); only `/api/auth/[...nextauth]` and `/api/auth/register` exist
+- **26 tests passing** — 6 test files: smoke, auth helpers, cloudinary, prisma, register endpoint, admin actions
+- **Docker PostgreSQL running** — `gocart_db` container, schema pushed
 - **Prisma 7** — `@prisma/adapter-pg`, generated client at `prisma/generated/prisma/`, config in `prisma.config.ts`
-- **Next.js 16.2.9** — `next lint` removed (now `eslint .`), `middleware.js` deprecated but functional (Auth.js v5 still in beta)
+- **Next.js 16.2.9** — server components + Server Actions pattern throughout admin panel
 - **Node 24** — `.nvmrc` set; run `nvm use 24` manually to switch
-- **`"type": "module"`** — package.json is full ESM; all source files already used `import`/`export`
-- **`.env.local` needs `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`** for Google OAuth; credentials sign-in works without it
-- **Zero Clerk imports** — `@clerk/nextjs` removed from package.json and all source files
+- **`"type": "module"`** — full ESM
+- **`.env.local` needs `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`** for Google OAuth
 
 ### Existing Route Zones
 
 ```
-app/(public)/     — storefront: home, shop, product, cart, orders, pricing, create-store
-app/store/        — vendor dashboard: dashboard, add-product, manage-product, orders
-app/admin/        — admin panel: dashboard, stores, approve, coupons
+app/(public)/     — storefront: home, shop, product, cart, orders, pricing, create-store (mocked)
+app/store/        — vendor dashboard: dashboard, add-product, manage-product, orders (mocked)
+app/admin/        — admin panel: dashboard, stores, approve, coupons, orders, users (REAL DATA)
 ```
 
 ### Existing Components
 ```
 components/admin/   AdminLayout, AdminNavbar, AdminSidebar, StoreInfo
+                    ui/UserMenu.jsx
+                    + per-page clients: StoresClient, ApproveClient, CouponsClient, OrdersClient
 components/store/   StoreLayout, StoreNavbar, StoreSidebar
 components/         Navbar, Footer, Hero, ProductCard, Banner, etc.
 lib/features/       cartSlice, productSlice, addressSlice, ratingSlice (Redux)
+app/admin/          actions.js — all Server Actions for admin panel mutations
 ```
 
 ---
@@ -142,6 +149,20 @@ lib/features/       cartSlice, productSlice, addressSlice, ratingSlice (Redux)
 - [x] Task 8 — Clerk in app (`ClerkProvider` + sign-in page)
 - [x] Task 9 — Middleware (route protection)
 - [x] Task 10 — Update `.env.example` + full test suite (11/11 passing)
+
+---
+
+## Phase 2 Checklist ✅ Complete — Admin Panel
+
+- [x] Task 1 — `app/admin/actions.js` — 5 Server Actions with `requireAdmin` guard, try/catch, enum validation
+- [x] Task 2 — `AdminSidebar.jsx` — added Orders + Users nav links
+- [x] Task 3 — `app/admin/page.jsx` — async server component, 5 parallel Prisma queries, real dashboard stats
+- [x] Task 4 — `app/admin/stores/page.jsx` + `StoresClient.jsx` — server component + toggle active
+- [x] Task 5 — `app/admin/approve/page.jsx` + `ApproveClient.jsx` — server component + approve/reject
+- [x] Task 6 — `app/admin/coupons/page.jsx` + `CouponsClient.jsx` — server component + create/delete coupons
+- [x] Task 7 — `app/admin/orders/page.jsx` + `OrdersClient.jsx` — new page, update order status
+- [x] Task 8 — `app/admin/users/page.jsx` — new view-only server component
+- [x] Tests — 26/26 passing (added 12 new tests for Server Actions)
 
 ---
 
