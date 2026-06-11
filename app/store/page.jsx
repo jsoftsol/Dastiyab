@@ -49,7 +49,7 @@ export default async function Dashboard() {
 
       <div className="flex flex-wrap gap-5 my-10 mt-4">
         {statCards.map((card, index) => (
-          <div key={index} className="flex items-center gap-11 border border-slate-200 p-3 px-6 rounded-lg">
+          <div key={card.title} className="flex items-center gap-11 border border-slate-200 p-3 px-6 rounded-lg">
             <div className="flex flex-col gap-3 text-xs">
               <p>{card.title}</p>
               <b className="text-2xl font-medium text-slate-700">{card.value}</b>
@@ -64,7 +64,7 @@ export default async function Dashboard() {
       <div className="mt-5">
         {serializedRatings.map((review, index) => (
           <div
-            key={index}
+            key={review.id}
             className="flex max-sm:flex-col gap-5 sm:items-center justify-between py-6 border-b border-slate-200 text-sm text-slate-600 max-w-4xl"
           >
             <div>
