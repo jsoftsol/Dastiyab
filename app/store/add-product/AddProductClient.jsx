@@ -34,6 +34,10 @@ export default function AddProductClient() {
         const fd = new FormData()
         fd.append('file', file)
         const res = await fetch('/api/upload', { method: 'POST', body: fd })
+        if (!res.ok) {
+          toast.error('Image upload failed')
+          return
+        }
         const data = await res.json()
         if (data.error) {
           toast.error('Image upload failed')
@@ -67,6 +71,7 @@ export default function AddProductClient() {
               className="h-15 w-auto border border-slate-200 rounded cursor-pointer"
               src={images[key] ? URL.createObjectURL(images[key]) : assets.upload_area}
               alt=""
+              unoptimized
             />
             <input
               type="file"
