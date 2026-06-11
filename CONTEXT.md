@@ -39,13 +39,13 @@ Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors man
 | 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | 🔲 Not started | _(create when Phase 4 done)_ |
 
 **Current phase:** Phase 4 — Public Storefront (not started)  
-**Last session ended:** 2026-06-12 — Phase 3 complete. All 5 vendor pages wired to real Prisma data, Cloudinary upload route wired, 45/45 tests passing.
+**Last session ended:** 2026-06-12 — Project renamed from GoCart to Dastiyab. Git remote added (https://github.com/jsoftsol/Dastiyab.git) and all commits pushed. Name updated across package.json, layouts, Footer, CLAUDE.md, CONTEXT.md, README, CONTRIBUTING, create-store page, and Cloudinary upload folder.
 
 ---
 
 ## Where We Left Off
 
-Phase 3 (Vendor Dashboard) is complete. All 5 vendor pages are wired to real PostgreSQL data via async server components + Server Actions. Cloudinary image upload route (`app/api/upload/route.js`) is live. 45/45 tests passing across 8 test files.
+Project renamed to **Dastiyab** and pushed to https://github.com/jsoftsol/Dastiyab.git. Phase 3 (Vendor Dashboard) is complete — all 5 vendor pages wired to real PostgreSQL data, Cloudinary upload live, 45/45 tests passing.
 
 **Immediate next step:** Phase 4 — Public Storefront. Wire existing public pages (`app/(public)/`) to real Prisma data — home, shop, product detail, cart, orders, create-store. Start with brainstorming skill.
 
