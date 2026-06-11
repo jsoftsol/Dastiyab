@@ -7,6 +7,7 @@ export default async function EditProductPage({ params }) {
   const { id } = await params
   const { userId } = await getAuthUser()
   const store = await prisma.store.findUnique({ where: { userId } })
+  if (!store) notFound()
 
   const product = await prisma.product.findUnique({ where: { id } })
   if (!product || product.storeId !== store.id) notFound()

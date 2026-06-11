@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma'
 import { getAuthUser } from '@/lib/auth'
+import { notFound } from 'next/navigation'
 import { CircleDollarSignIcon, ShoppingBasketIcon, StarIcon, TagsIcon } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -8,6 +9,7 @@ export default async function Dashboard() {
   const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$'
   const { userId } = await getAuthUser()
   const store = await prisma.store.findUnique({ where: { userId } })
+  if (!store) notFound()
 
   const [productCount, earningsAgg, orderCount, ratingCount, recentRatings] = await Promise.all([
     prisma.product.count({ where: { storeId: store.id } }),
