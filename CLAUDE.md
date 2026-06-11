@@ -6,17 +6,17 @@
 
 ## Project Overview
 
-GoCart is a multi-vendor e-commerce platform built with Next.js 15. Vendors create and manage their own stores, customers browse and place COD orders, and admins oversee the entire marketplace. Long-term vision: a self-serve platform like Shopify.
+GoCart is a multi-vendor e-commerce platform built with Next.js 16. Vendors create and manage their own stores, customers browse and place COD orders, and admins oversee the entire marketplace. Long-term vision: a self-serve platform like Shopify.
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Next.js 15.3.5 (Turbopack), React 19 |
+| Framework | Next.js 16 (Turbopack), React 19.2, Node 24 |
 | Styling | Tailwind CSS v4 |
 | Admin + Vendor UI | TailAdmin free Next.js template (components copied in) |
-| Auth | Clerk (`@clerk/nextjs`) |
-| ORM | Prisma with standard PostgreSQL driver |
+| Auth | Auth.js v5 (`next-auth@beta`) + Prisma adapter — roles: admin, vendor, customer |
+| ORM | Prisma 7 + `@prisma/adapter-pg` (PostgreSQL driver adapter) |
 | Database | PostgreSQL (local Docker for dev) |
 | Image Storage | Cloudinary |
 | Payments | COD only (Stripe deferred) |
@@ -75,13 +75,13 @@ Work proceeds in this order — each phase must be complete before the next:
 
 ## Auth & Roles
 
-Three roles managed via Clerk `publicMetadata.role`:
+Three roles stored in the `User.role` DB column, enforced via Auth.js v5 JWT sessions:
 
 | Role | Assignment | Access |
 |------|-----------|--------|
-| `admin` | Manual via Clerk dashboard | `/admin/*` |
-| `vendor` | Auto-assigned on store creation | `/store/*` |
-| `customer` | Default (no explicit role) | public routes + `/orders` |
+| `admin` | Set directly in DB: `UPDATE "User" SET role='admin' WHERE email='...'` then sign out/in | `/admin/*` |
+| `vendor` | Set by `POST /api/public/stores` at store creation, forced sign-out | `/store/*` |
+| `customer` | Default (`role` column default) | public routes + `/orders` |
 
 ## API Conventions
 
@@ -96,17 +96,18 @@ Three roles managed via Clerk `publicMetadata.role`:
 - TailAdmin components live in `components/admin/` and `components/store/` — do not modify the upstream template files directly
 - Shared UI primitives (`StatCard`, `DataTable`, `Badge`, `PageHeader`) live in `components/admin/ui/` and are imported by both admin and vendor components
 - `next.config.mjs` currently has `images: { unoptimized: true }` — leave as-is until Cloudinary is configured
-- No `driverAdapters` in Prisma — standard PostgreSQL driver only
+- Prisma 7 uses `@prisma/adapter-pg` — client is generated at `prisma/generated/prisma/`, imported via `@/prisma/generated/prisma`
+- Prisma config lives in `prisma.config.ts` (project root) — database URL is loaded from `.env.local` via dotenv
 
 ## Environment Variables
 
 ```env
 DATABASE_URL=postgresql://user:password@localhost:5432/gocart
 
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
-CLERK_SECRET_KEY=sk_...
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=<random-32-char-string>
+GOOGLE_CLIENT_ID=<from Google Cloud Console>
+GOOGLE_CLIENT_SECRET=<from Google Cloud Console>
 
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=...
 CLOUDINARY_API_KEY=...
