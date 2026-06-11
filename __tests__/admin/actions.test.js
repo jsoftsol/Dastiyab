@@ -133,4 +133,11 @@ describe('updateOrderStatus', () => {
     })
     expect(revalidatePath).toHaveBeenCalledWith('/admin/orders')
   })
+
+  it('returns error for invalid status', async () => {
+    requireAdmin.mockResolvedValue({ userId: 'u1', role: 'admin' })
+    const result = await updateOrderStatus('order_1', 'INVALID_STATUS')
+    expect(result).toEqual({ error: 'Invalid status' })
+    expect(prisma.order.update).not.toHaveBeenCalled()
+  })
 })
