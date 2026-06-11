@@ -19,7 +19,7 @@ export async function POST(request) {
   const dataURI = `data:${file.type};base64,${buffer.toString('base64')}`
 
   try {
-    const result = await cloudinary.uploader.upload(dataURI, { folder: 'gocart' })
+    const result = await cloudinary.uploader.upload(dataURI, { folder: 'dastiyab' })
     return NextResponse.json({ url: result.secure_url })
   } catch {
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 })

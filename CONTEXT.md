@@ -1,4 +1,4 @@
-# GoCart — Session Context
+# Dastiyab — Session Context
 
 > **Read this first at every session start.** This file is the single source of truth for project state. Update it on every progress save before ending a session.
 
@@ -6,7 +6,7 @@
 
 ## Project in One Sentence
 
-GoCart is a multi-vendor e-commerce marketplace (Next.js 16) where vendors manage their own stores, customers place COD orders, and admins oversee the platform — built toward a Shopify-like vision.
+Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors manage their own stores, customers place COD orders, and admins oversee the platform — built toward a Shopify-like vision.
 
 ---
 

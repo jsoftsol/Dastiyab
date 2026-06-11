@@ -1,4 +1,4 @@
-# GoCart — Claude Code Instructions
+# Dastiyab — Claude Code Instructions
 
 ## Session Start
 
@@ -6,7 +6,7 @@
 
 ## Project Overview
 
-GoCart is a multi-vendor e-commerce platform built with Next.js 16. Vendors create and manage their own stores, customers browse and place COD orders, and admins oversee the entire marketplace. Long-term vision: a self-serve platform like Shopify.
+Dastiyab is a multi-vendor e-commerce platform built with Next.js 16. Vendors create and manage their own stores, customers browse and place COD orders, and admins oversee the entire marketplace. Long-term vision: a self-serve platform like Shopify.
 
 ## Tech Stack
 
