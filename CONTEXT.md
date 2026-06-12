@@ -35,19 +35,25 @@ Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors man
 | 1 | Foundation — PostgreSQL, Prisma, Cloudinary, middleware | ✅ Complete | `docs/superpowers/plans/2026-06-11-phase-1-foundation.md` |
 | 2 | Admin Panel — TailAdmin UI + 6 admin pages + API routes | ✅ Complete | `docs/superpowers/plans/2026-06-12-phase-2-admin-panel.md` |
 | 3 | Vendor Dashboard — TailAdmin UI + 4 vendor pages + Cloudinary upload | ✅ Complete | `docs/superpowers/plans/2026-06-12-phase-3-vendor-dashboard.md` |
-| 4 | Public Storefront — wire existing pages to real API routes | 🔄 In progress | `docs/superpowers/specs/2026-06-12-phase-4-public-storefront-design.md` |
+| 4 | Public Storefront — wire existing pages to real API routes | ✅ Complete | `docs/superpowers/specs/2026-06-12-phase-4-public-storefront-design.md` |
 | 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | 🔲 Not started | _(create when Phase 4 done)_ |
 
-**Current phase:** Phase 4 — Public Storefront (implementation plan complete, ready to execute)  
-**Last session ended:** 2026-06-12 — Phase 4 implementation plan fully written (Tasks 1-18). All 10 API routes (Tasks 1-8) and all 10 page/component wiring tasks (Tasks 9-18) documented with full code. Plan at `docs/superpowers/plans/2026-06-12-phase-4-public-storefront.md`. Ready to execute — use subagent-driven-development or executing-plans skill.
+**Current phase:** Phase 5 — Platform Services (not started)  
+**Last session ended:** 2026-06-12 — Phase 4 complete. All 18 tasks executed via subagent-driven-development. 10 API routes + all 8 storefront pages/components wired. 106/106 tests passing. Public storefront fully wired to real PostgreSQL data.
 
 ---
 
 ## Where We Left Off
 
-Project renamed to **Dastiyab** and pushed to https://github.com/jsoftsol/Dastiyab.git. Phase 3 (Vendor Dashboard) is complete — all 5 vendor pages wired to real PostgreSQL data, Cloudinary upload live, 45/45 tests passing.
+Phase 4 (Public Storefront) is complete. All pages are wired to real PostgreSQL data:
+- Products list, product detail, categories, store shop — `GET /api/public/*`
+- Cart persistence — `GET|PUT /api/customer/cart`, Redux + DB sync via `lib/syncCart.js`
+- Checkout — addresses (`GET|POST|DELETE /api/customer/addresses`), coupon validation, order placement (`POST /api/customer/orders`) with multi-store grouping in `$transaction`
+- Orders page + ratings — `GET /api/customer/orders`, `POST /api/customer/ratings`
+- Create Store — `POST /api/public/stores` (creates store, sets vendor role, signOut), `GET /api/customer/store`
+- CartSync hydrates Redux cart from DB on login
 
-**Immediate next step:** Execute Phase 4 implementation plan at `docs/superpowers/plans/2026-06-12-phase-4-public-storefront.md`. Use subagent-driven-development or executing-plans skill. Tasks 1-8 are all new API routes (backend); Tasks 9-18 wire existing pages/components to those APIs.
+**Immediate next step:** Begin Phase 5 — Platform Services. Create design spec and implementation plan. Key items: coupon engine enhancements, ratings aggregation, any remaining platform features per `docs/PRD.md`.
 
 **Before manual testing of auth:** Add Google OAuth credentials to `.env.local`:
 - `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (from Google Cloud Console)
@@ -93,10 +99,12 @@ Project renamed to **Dastiyab** and pushed to https://github.com/jsoftsol/Dastiy
 - **Admin panel fully wired** — all 6 pages use real Prisma data; Server Actions handle all mutations
 - **Vendor dashboard fully wired** — all 5 pages (dashboard, add-product, manage-product, edit-product, orders) use real Prisma data; Server Actions in `app/store/actions.js`
 - **Cloudinary upload live** — `app/api/upload/route.js` handles image uploads for vendor + admin; returns `secure_url`
-- **Public storefront still mocked** — Phase 4 wires these
+- **Public storefront fully wired** — all pages use real PostgreSQL data via REST APIs (Phase 4 complete)
 - **Auth is fully wired** — Auth.js v5 (JWT strategy), Google + credentials providers, role-based middleware, custom sign-in page, UserMenu in admin/vendor navbars
 - **No admin/vendor API routes** — mutations use Server Actions; only `/api/auth/*`, `/api/auth/register`, `/api/upload` exist
-- **45 tests passing** — 8 test files: smoke, auth helpers, cloudinary, prisma, register endpoint, admin actions, store actions, upload route
+- **Public API routes** — `/api/public/products`, `/api/public/products/[id]`, `/api/public/categories`, `/api/public/stores/[username]`, `/api/public/stores` (POST), `/api/public/coupons/validate`
+- **Customer API routes** — `/api/customer/cart`, `/api/customer/addresses`, `/api/customer/addresses/[id]`, `/api/customer/orders`, `/api/customer/ratings`, `/api/customer/store`
+- **106 tests passing** — 15 test files: all Phase 1-4 routes covered
 - **Docker PostgreSQL running** — `gocart_db` container, schema pushed
 - **Prisma 7** — `@prisma/adapter-pg`, generated client at `prisma/generated/prisma/`, config in `prisma.config.ts`
 - **Next.js 16.2.9** — server components + Server Actions pattern throughout admin + vendor panels
@@ -188,6 +196,30 @@ app/store/edit-product/[id]/  EditProductClient.jsx
 - [x] Task 7 — `app/store/edit-product/[id]/page.jsx` + `EditProductClient.jsx` — pre-populated form with image replacement, calls `updateProduct`
 - [x] Task 8 — `app/store/orders/page.jsx` + `OrdersClient.jsx` — orders table with status dropdown + order detail modal
 - [x] Tests — 45/45 passing (added 15 store action tests + 3 upload route tests)
+
+---
+
+## Phase 4 Checklist ✅ Complete — Public Storefront
+
+- [x] Task 1 — `app/api/public/products/route.js` — GET with pagination, search, category, storeId, sort; base where: inStock+isActive
+- [x] Task 2 — `app/api/public/products/[id]/route.js` + `app/api/public/categories/route.js` — product detail + distinct categories
+- [x] Task 3 — `app/api/public/stores/[username]/route.js` — store lookup, strips internal fields
+- [x] Task 4 — `app/api/public/coupons/validate/route.js` — POST, case-insensitive, expiry check
+- [x] Task 5 — `app/api/customer/cart/route.js` — GET (unauthenticated returns empty cart), PUT (validates cart shape)
+- [x] Task 6 — `app/api/customer/addresses/route.js` + `[id]/route.js` — CRUD with all 8 required fields, ownership check on DELETE
+- [x] Task 7 — `app/api/customer/orders/route.js` — GET user orders; POST multi-store order in $transaction, address ownership check, server-side prices
+- [x] Task 8 — `app/api/customer/ratings/route.js` — POST with DELIVERED check, duplicate prevention
+- [x] Task 9 — `lib/features/cart/cartSlice.js` (added setCart), `lib/features/product/productSlice.js` (removed mock data), `lib/syncCart.js` (fire-and-forget cart sync)
+- [x] Task 10 — `components/CartSync.jsx` + `app/layout.jsx` — hydrates Redux cart from DB on login, merge rule: max qty
+- [x] Task 11 — `components/LatestProducts.jsx`, `BestSelling.jsx`, `CategoriesMarquee.jsx` — fetch from real APIs
+- [x] Task 12 — `app/(public)/shop/page.jsx` — infinite scroll + IntersectionObserver + Load More fallback
+- [x] Task 13 — `app/(public)/shop/[username]/page.jsx` — store info + paginated products
+- [x] Task 14 — `app/(public)/product/[productId]/page.jsx` + `ProductDetails.jsx` + `Counter.jsx` — syncCart on add/remove
+- [x] Task 15 — `app/(public)/cart/page.jsx` — Promise.all product fetches, syncCart on delete
+- [x] Task 16 — `components/OrderSummary.jsx` + `AddressModal.jsx` — addresses, coupon, place order; all 8 address fields
+- [x] Task 17 — `app/(public)/orders/page.jsx` + `OrderItem.jsx` + `RatingModal.jsx` — orders list + POST rating; fixed toast.promise bug + 0-star validation
+- [x] Task 18 — `app/(public)/create-store/page.jsx` + `app/api/customer/store/route.js` + `app/api/public/stores/route.js` — store creation flow, vendor role update, signOut
+- [x] Tests — 106/106 passing (all new API routes covered, no regressions)
 
 ---
 
