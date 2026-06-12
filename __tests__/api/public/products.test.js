@@ -5,7 +5,6 @@ vi.mock('@/lib/prisma', () => ({
     product: {
       findMany: vi.fn(),
       count: vi.fn(),
-      findUnique: vi.fn(),
     },
   },
 }))
@@ -46,6 +45,18 @@ describe('GET /api/public/products', () => {
     expect(body.totalPages).toBe(1)
   })
 
+  it('only returns inStock products from active stores', async () => {
+    prisma.product.findMany.mockResolvedValue([])
+    prisma.product.count.mockResolvedValue(0)
+    const req = new NextRequest('http://localhost/api/public/products')
+    await GET(req)
+    expect(prisma.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ inStock: true, store: { isActive: true } }),
+      })
+    )
+  })
+
   it('applies search filter', async () => {
     prisma.product.findMany.mockResolvedValue([])
     prisma.product.count.mockResolvedValue(0)
@@ -66,7 +77,21 @@ describe('GET /api/public/products', () => {
     const req = new NextRequest('http://localhost/api/public/products?category=Watch')
     await GET(req)
     expect(prisma.product.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { category: 'Watch' } })
+      expect.objectContaining({
+        where: expect.objectContaining({ category: 'Watch' }),
+      })
+    )
+  })
+
+  it('applies storeId filter', async () => {
+    prisma.product.findMany.mockResolvedValue([])
+    prisma.product.count.mockResolvedValue(0)
+    const req = new NextRequest('http://localhost/api/public/products?storeId=store_1')
+    await GET(req)
+    expect(prisma.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ storeId: 'store_1' }),
+      })
     )
   })
 
@@ -91,5 +116,26 @@ describe('GET /api/public/products', () => {
     expect(prisma.product.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ skip: 10, take: 5 })
     )
+  })
+
+  it('uses default page and limit when params are non-numeric', async () => {
+    prisma.product.findMany.mockResolvedValue([])
+    prisma.product.count.mockResolvedValue(0)
+    const req = new NextRequest('http://localhost/api/public/products?page=abc&limit=xyz')
+    const res = await GET(req)
+    const body = await res.json()
+    expect(body.page).toBe(1)
+    expect(prisma.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 0, take: 12 })
+    )
+  })
+
+  it('returns 500 when Prisma throws', async () => {
+    prisma.product.findMany.mockRejectedValue(new Error('DB error'))
+    const req = new NextRequest('http://localhost/api/public/products')
+    const res = await GET(req)
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.error).toBeDefined()
   })
 })
