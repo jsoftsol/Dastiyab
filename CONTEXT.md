@@ -36,10 +36,10 @@ Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors man
 | 2 | Admin Panel — TailAdmin UI + 6 admin pages + API routes | ✅ Complete | `docs/superpowers/plans/2026-06-12-phase-2-admin-panel.md` |
 | 3 | Vendor Dashboard — TailAdmin UI + 4 vendor pages + Cloudinary upload | ✅ Complete | `docs/superpowers/plans/2026-06-12-phase-3-vendor-dashboard.md` |
 | 4 | Public Storefront — wire existing pages to real API routes | ✅ Complete | `docs/superpowers/specs/2026-06-12-phase-4-public-storefront-design.md` |
-| 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | 🔲 Not started | _(create when Phase 4 done)_ |
+| 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | 🔄 In progress | `docs/superpowers/specs/2026-06-12-phase-5-platform-services-design.md` |
 
-**Current phase:** Phase 5 — Platform Services (not started)  
-**Last session ended:** 2026-06-12 — Phase 4 complete. All 18 tasks executed via subagent-driven-development. 10 API routes + all 8 storefront pages/components wired. 106/106 tests passing. Public storefront fully wired to real PostgreSQL data.
+**Current phase:** Phase 5 — Platform Services (design approved, implementation plan next)  
+**Last session ended:** 2026-06-12 — Phase 5 design spec written and approved. Two workstreams: (1) coupon flag enforcement (`forNewUser`, `forMember`, `isPublic`) in validate + orders routes; (2) on-the-fly `averageRating`/`ratingCount` aggregation in products list + detail routes. No schema changes.
 
 ---
 
@@ -53,7 +53,7 @@ Phase 4 (Public Storefront) is complete. All pages are wired to real PostgreSQL 
 - Create Store — `POST /api/public/stores` (creates store, sets vendor role, signOut), `GET /api/customer/store`
 - CartSync hydrates Redux cart from DB on login
 
-**Immediate next step:** Begin Phase 5 — Platform Services. Create design spec and implementation plan. Key items: coupon engine enhancements, ratings aggregation, any remaining platform features per `docs/PRD.md`.
+**Immediate next step:** Write Phase 5 implementation plan, then execute it.
 
 **Before manual testing of auth:** Add Google OAuth credentials to `.env.local`:
 - `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (from Google Cloud Console)
