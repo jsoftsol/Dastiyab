@@ -38,8 +38,8 @@ Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors man
 | 4 | Public Storefront — wire existing pages to real API routes | 🔄 In progress | `docs/superpowers/specs/2026-06-12-phase-4-public-storefront-design.md` |
 | 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | 🔲 Not started | _(create when Phase 4 done)_ |
 
-**Current phase:** Phase 4 — Public Storefront (design approved, implementation plan not yet written)  
-**Last session ended:** 2026-06-12 — Phase 4 design spec written and committed. API-routes + client components approach chosen for mobile-app compatibility. DB-persisted cart (`User.cart` JSON), infinite scroll + Load More fallback, full checkout flow (addresses, coupon validation, order placement, ratings). 14 new API routes across `/api/public/*` and `/api/customer/*`. Target ~75 tests.
+**Current phase:** Phase 4 — Public Storefront (design approved, writing implementation plan)  
+**Last session ended:** 2026-06-12 — Phase 4 design spec written and committed. API-routes + client components approach chosen for mobile-app compatibility. DB-persisted cart (`User.cart` JSON), infinite scroll + Load More fallback, full checkout flow (addresses, coupon validation, order placement, ratings). 14 new API routes across `/api/public/*` and `/api/customer/*`. Target ~75 tests. Implementation plan writing in progress — invoke writing-plans skill to continue.
 
 ---
 
