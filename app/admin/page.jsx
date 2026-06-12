@@ -2,6 +2,8 @@ import prisma from '@/lib/prisma'
 import OrdersAreaChart from '@/components/OrdersAreaChart'
 import { CircleDollarSignIcon, ShoppingBasketIcon, StoreIcon, TagsIcon } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminDashboard() {
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$'
 

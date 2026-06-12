@@ -1,6 +1,8 @@
 import prisma from '@/lib/prisma'
 import StoresClient from './StoresClient'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminStores() {
     const stores = await prisma.store.findMany({
         where: { status: 'approved' },

@@ -3,6 +3,8 @@ import { getAuthUser } from '@/lib/auth'
 import { notFound } from 'next/navigation'
 import OrdersClient from './OrdersClient'
 
+export const dynamic = 'force-dynamic'
+
 export default async function StoreOrders() {
   const { userId } = await getAuthUser()
   const store = await prisma.store.findUnique({ where: { userId } })

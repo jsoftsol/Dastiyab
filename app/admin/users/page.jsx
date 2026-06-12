@@ -1,5 +1,7 @@
 import prisma from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminUsers() {
     const users = await prisma.user.findMany({
         include: { store: { select: { name: true } } },

@@ -3,6 +3,8 @@ import { getAuthUser } from '@/lib/auth'
 import { notFound } from 'next/navigation'
 import EditProductClient from './EditProductClient'
 
+export const dynamic = 'force-dynamic'
+
 export default async function EditProductPage({ params }) {
   const { id } = await params
   const { userId } = await getAuthUser()
