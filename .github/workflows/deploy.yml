@@ -31,8 +31,11 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            set -e
             cd ${{ secrets.SERVER_APP_DIR }}/release
             echo "${{ secrets.PRODUCTION_ENV }}" > .env.production
-            docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+            chmod 600 .env.production
+            docker compose --env-file .env.production -f docker-compose.prod.yml up -d postgres
             docker compose --env-file .env.production -f docker-compose.prod.yml run --rm migrate
+            docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build app
             docker image prune -f
