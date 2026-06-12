@@ -42,17 +42,17 @@ Three fully isolated role zones share one PostgreSQL schema and one deployment. 
 | Database | PostgreSQL | Docker locally; any VPS Postgres in production |
 | Image CDN | Cloudinary | Vendor product images; auth-gated upload endpoint |
 | State (client) | Redux Toolkit | Cart, address, ratings — client-only slices |
-| Testing | Vitest | 45 tests across 8 suites; unit + integration |
+| Testing | Vitest | 120 tests across 15 suites; unit + integration |
 
 ---
 
 ## Features
 
 ### Customer Storefront
-- Product catalog with category filtering and search
-- Product detail pages with image gallery and star ratings
-- Persistent cart (Redux + localStorage)
-- Checkout with saved delivery addresses (add / select at purchase)
+- Product catalog with category filtering, search, and infinite scroll
+- Product detail pages with image gallery and computed star ratings
+- Persistent cart (Redux + DB sync — hydrates on login)
+- Checkout with saved delivery addresses and coupon validation
 - COD order placement and live order status tracking
 - Individual vendor store profile pages
 
@@ -68,7 +68,7 @@ Three fully isolated role zones share one PostgreSQL schema and one deployment. 
 - Store approval workflow — approve or reject vendor applications
 - Store activation toggle — suspend a live store instantly
 - User directory and role inspection
-- Coupon engine — create discount codes with percentage off, expiry date, and audience targeting (new user / member / public)
+- Coupon engine — percentage-off codes with expiry, audience targeting (new user / member / public)
 - Cross-platform order management and status overrides
 
 ### Platform-Wide
@@ -76,6 +76,7 @@ Three fully isolated role zones share one PostgreSQL schema and one deployment. 
 - All vendor data strictly scoped to session — `storeId` is always derived server-side, never accepted from the client
 - Shared Prisma singleton — no `new PrismaClient()` in route handlers
 - Cloudinary upload endpoint auth-gated to `vendor` and `admin` roles
+- Coupon validation enforces isPublic / forMember / forNewUser flags at both validate and order-placement endpoints
 
 ---
 
@@ -108,7 +109,7 @@ Selected schema decisions:
 
 ```
 app/
-  (public)/         customer storefront — home, shop, product, cart, orders
+  (public)/         customer storefront — home, shop, product, cart, orders, create-store
   admin/            admin panel — dashboard, stores, approve, coupons, orders, users
     actions.js      all admin Server Actions (requireAdmin guard)
   store/            vendor dashboard — dashboard, add/edit/manage products, orders
@@ -116,7 +117,8 @@ app/
   api/
     auth/           Auth.js handler + registration endpoint
     upload/         Cloudinary image upload (auth-gated)
-  sign-in/          custom sign-in page — Google OAuth + email/password tabs
+    public/         customer-facing REST: products, categories, stores, coupons/validate
+    customer/       authenticated REST: cart, addresses, orders, ratings, store
 
 components/
   admin/            TailAdmin-based admin components
@@ -128,14 +130,16 @@ lib/
   prisma.js         shared Prisma client singleton
   auth.js           requireAdmin(), requireVendor(), getAuthUser() helpers
   cloudinary.js     Cloudinary SDK wrapper
+  syncCart.js       fire-and-forget Redux ↔ DB cart sync
   features/         Redux slices: cartSlice, productSlice, addressSlice, ratingSlice
   store.js          Redux store
 
 prisma/
   schema.prisma     canonical DB schema
   generated/        Prisma 7 generated client — do not edit
+  migrations/       SQL migration files
 
-__tests__/          Vitest test suites (45 tests, 8 files)
+__tests__/          Vitest test suites (120 tests, 15 files)
 docs/               PRD, technical specs, implementation plans
 ```
 
@@ -210,7 +214,7 @@ Sign out and back in — you'll be routed to `/admin`.
 ## Testing
 
 ```bash
-npm test             # run all 45 tests
+npm test             # run all 120 tests
 npm run test:watch   # watch mode
 ```
 
@@ -223,7 +227,46 @@ npm run test:watch   # watch mode
 | api/register | 4 | registration endpoint, validation, duplicate email |
 | api/upload | 3 | Cloudinary endpoint, auth guards |
 | admin/actions | 12 | 5 admin Server Actions — auth, enum validation, DB calls |
-| store/actions | 11 | 5 vendor Server Actions — auth, ownership enforcement |
+| store/actions | 15 | 5 vendor Server Actions — auth, ownership enforcement |
+| api/public/products | 8 | list with filters/pagination, detail with ratings |
+| api/public/categories | 3 | distinct category list |
+| api/public/stores | 6 | store lookup, store creation, vendor role update |
+| api/public/coupons | 8 | validate endpoint — expiry, audience flags, auth-aware |
+| api/customer/cart | 4 | GET (unauthed returns empty), PUT validation |
+| api/customer/addresses | 8 | CRUD, ownership check on DELETE |
+| api/customer/orders | 7 | multi-store transaction, address ownership, server-side prices |
+| api/customer/ratings | 7 | DELIVERED check, duplicate prevention |
+
+---
+
+## Deployment
+
+The project ships as a Docker multi-stage image behind a GitHub Actions workflow.
+
+### Docker
+
+```bash
+# Production stack (app + postgres + migrate)
+docker compose -f docker-compose.prod.yml up -d
+```
+
+The `Dockerfile` uses three stages: `deps` (install), `builder` (Next.js build + `prisma generate`), `runner` (minimal production image). Next.js standalone output is used for a lean container.
+
+### CI/CD — GitHub Actions
+
+Push to the `deploy` branch triggers `.github/workflows/deploy.yml`:
+
+1. rsync project files to VPS
+2. SSH: write `.env.production`, start postgres, run `prisma migrate deploy`, start app with `--build`
+3. Prune old Docker images
+
+**Required GitHub secrets:** `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`, `SERVER_APP_DIR`, `PRODUCTION_ENV`
+
+**VPS pre-deploy checklist:**
+1. Docker + Docker Compose v2 installed
+2. SSH key in `~/.ssh/authorized_keys`
+3. `$SERVER_APP_DIR/release/` directory exists
+4. All 5 secrets configured in GitHub repository settings
 
 ---
 
@@ -235,8 +278,9 @@ npm run test:watch   # watch mode
 | 1 | Foundation — PostgreSQL, Prisma 7, Cloudinary, middleware | Complete |
 | 2 | Admin Panel — TailAdmin UI + 6 pages + Server Actions | Complete |
 | 3 | Vendor Dashboard — 5 pages + Cloudinary upload + Server Actions | Complete |
-| 4 | Public Storefront — wire existing pages to real Prisma data | In progress |
-| 5 | Platform Services — coupon engine, product ratings | Planned |
+| 4 | Public Storefront — wire existing pages to real Prisma data | Complete |
+| 5 | Platform Services — coupon engine, product ratings | Complete |
+| — | Deployment — Docker, docker-compose.prod.yml, GitHub Actions CI/CD | Complete |
 
 ---
 
