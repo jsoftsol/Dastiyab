@@ -1501,4 +1501,452 @@ git commit -m "feat: add POST /api/customer/ratings with delivered-order and dup
 
 ---
 
-<!-- PLAN CONTINUES — Tasks 9–18 to be written in subsequent parts -->
+---
+
+## Part 3: Redux Updates, Cart Sync Helper, CartSync Component
+
+---
+
+### Task 9: Redux updates + `lib/syncCart.js`
+
+**Files:**
+- Modify: `lib/features/cart/cartSlice.js`
+- Modify: `lib/features/product/productSlice.js`
+- Create: `lib/syncCart.js`
+
+- [ ] **Step 1: Add `setCart` action to cartSlice**
+
+Open `lib/features/cart/cartSlice.js`. Add `setCart` reducer and export it:
+
+```js
+import { createSlice } from '@reduxjs/toolkit'
+
+const cartSlice = createSlice({
+  name: 'cart',
+  initialState: { total: 0, cartItems: {} },
+  reducers: {
+    addToCart: (state, action) => {
+      const { productId } = action.payload
+      if (state.cartItems[productId]) {
+        state.cartItems[productId]++
+      } else {
+        state.cartItems[productId] = 1
+      }
+      state.total += 1
+    },
+    removeFromCart: (state, action) => {
+      const { productId } = action.payload
+      if (state.cartItems[productId]) {
+        state.cartItems[productId]--
+        if (state.cartItems[productId] === 0) {
+          delete state.cartItems[productId]
+        }
+      }
+      state.total -= 1
+    },
+    deleteItemFromCart: (state, action) => {
+      const { productId } = action.payload
+      state.total -= state.cartItems[productId] ? state.cartItems[productId] : 0
+      delete state.cartItems[productId]
+    },
+    clearCart: (state) => {
+      state.cartItems = {}
+      state.total = 0
+    },
+    setCart: (state, action) => {
+      // action.payload = { productId: quantity } — same shape as cartItems
+      const items = action.payload || {}
+      state.cartItems = items
+      state.total = Object.values(items).reduce((sum, qty) => sum + qty, 0)
+    },
+  },
+})
+
+export const { addToCart, removeFromCart, clearCart, deleteItemFromCart, setCart } = cartSlice.actions
+export default cartSlice.reducer
+```
+
+- [ ] **Step 2: Remove mock product data from productSlice**
+
+Open `lib/features/product/productSlice.js`. Change `initialState` from `{ list: productDummyData }` (or whatever mock array is used) to `{ list: [] }`. Remove the import of dummy data. The slice should look like:
+
+```js
+import { createSlice } from '@reduxjs/toolkit'
+
+const productSlice = createSlice({
+  name: 'product',
+  initialState: { list: [] },
+  reducers: {
+    setProducts: (state, action) => {
+      state.list = action.payload
+    },
+  },
+})
+
+export const { setProducts } = productSlice.actions
+export default productSlice.reducer
+```
+
+> Note: if `productSlice` currently has no `setProducts` action, add it. Pages will call `dispatch(setProducts(data))` after fetching from the API.
+
+- [ ] **Step 3: Create `lib/syncCart.js`**
+
+```js
+export function syncCart(cartItems) {
+  fetch('/api/customer/cart', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cart: cartItems }),
+  }).catch(() => {})
+}
+```
+
+This is fire-and-forget: errors are silently swallowed. The Redux state is always the source of truth for the UI.
+
+- [ ] **Step 4: Commit**
+
+```
+git add lib/features/cart/cartSlice.js lib/features/product/productSlice.js lib/syncCart.js
+git commit -m "feat: add setCart action to cartSlice, clear product mock data, add syncCart helper"
+```
+
+---
+
+### Task 10: `CartSync` component + wire to root layout
+
+**Files:**
+- Create: `components/CartSync.jsx`
+- Modify: `app/layout.jsx`
+
+- [ ] **Step 1: Create `components/CartSync.jsx`**
+
+This component fires once on mount when the user is logged in. It fetches the DB cart, merges it with whatever is already in Redux (guest cart), and syncs the merged result back.
+
+```jsx
+'use client'
+import { useEffect, useRef } from 'react'
+import { useSession } from 'next-auth/react'
+import { useDispatch, useSelector } from 'react-redux'
+import { setCart } from '@/lib/features/cart/cartSlice'
+import { syncCart } from '@/lib/syncCart'
+
+export default function CartSync() {
+  const { data: session, status } = useSession()
+  const dispatch = useDispatch()
+  const localCart = useSelector(state => state.cart.cartItems)
+  const localCartRef = useRef(localCart)
+  const synced = useRef(false)
+
+  // Capture local cart before it gets overwritten
+  useEffect(() => {
+    localCartRef.current = localCart
+  }, [localCart])
+
+  useEffect(() => {
+    if (status !== 'authenticated' || synced.current) return
+    synced.current = true
+
+    async function merge() {
+      const res = await fetch('/api/customer/cart')
+      if (!res.ok) return
+      const { cart: dbCart } = await res.json()
+
+      // Merge: take Math.max(localQty, dbQty) per product
+      const merged = { ...dbCart }
+      const local = localCartRef.current
+      for (const [productId, qty] of Object.entries(local)) {
+        merged[productId] = Math.max(merged[productId] ?? 0, qty)
+      }
+
+      dispatch(setCart(merged))
+      syncCart(merged)
+    }
+
+    merge()
+  }, [status, dispatch])
+
+  return null
+}
+```
+
+- [ ] **Step 2: Add `<CartSync />` to root layout**
+
+Open `app/layout.jsx`. Import `CartSync` and add it inside `StoreProvider`:
+
+```jsx
+import { Outfit } from 'next/font/google'
+import { Toaster } from 'react-hot-toast'
+import StoreProvider from '@/app/StoreProvider'
+import AuthProvider from '@/app/AuthProvider'
+import CartSync from '@/components/CartSync'
+import './globals.css'
+
+const outfit = Outfit({ subsets: ['latin'], weight: ['400', '500', '600'] })
+
+export const metadata = {
+  title: 'Dastiyab. - Shop smarter',
+  description: 'Dastiyab. - Shop smarter',
+}
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body className={`${outfit.className} antialiased`}>
+        <AuthProvider>
+          <StoreProvider>
+            <CartSync />
+            <Toaster />
+            {children}
+          </StoreProvider>
+        </AuthProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+- [ ] **Step 3: Verify dev server starts without errors**
+
+```
+npm run dev
+```
+
+Open `http://localhost:3000`. Check the browser console for errors. Cart badge should still show correctly.
+
+- [ ] **Step 4: Commit**
+
+```
+git add components/CartSync.jsx app/layout.jsx
+git commit -m "feat: add CartSync component to merge and hydrate Redux cart from DB on login"
+```
+
+---
+
+### Task 11: Wire home page components (LatestProducts, BestSelling, CategoriesMarquee)
+
+**Files:**
+- Modify: `components/LatestProducts.jsx`
+- Modify: `components/BestSelling.jsx`
+- Modify: `components/CategoriesMarquee.jsx`
+
+- [ ] **Step 1: Wire `components/LatestProducts.jsx`**
+
+Replace the mock data import with a `useEffect` fetch. Keep the existing render JSX — only change the data source:
+
+```jsx
+'use client'
+import { useEffect, useState } from 'react'
+import ProductCard from '@/components/ProductCard'
+
+export default function LatestProducts() {
+  const [products, setProducts] = useState([])
+
+  useEffect(() => {
+    fetch('/api/public/products?limit=4&sort=createdAt')
+      .then(r => r.json())
+      .then(data => setProducts(data.products ?? []))
+      .catch(() => {})
+  }, [])
+
+  return (
+    <div className="flex flex-col items-center pt-14" id="latest-products">
+      <p className="text-2xl font-medium uppercase">Latest Products</p>
+      <div className="w-28 h-0.5 bg-gray-600 mb-10 mt-2"></div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mt-6 pb-14 w-full">
+        {products.map(product => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+> Adjust the JSX to match the existing component structure exactly — the above is a template. The key change is: remove mock data import, add `useEffect` + `useState` fetch.
+
+- [ ] **Step 2: Wire `components/BestSelling.jsx`**
+
+Same pattern, different query params:
+
+```jsx
+'use client'
+import { useEffect, useState } from 'react'
+import ProductCard from '@/components/ProductCard'
+
+export default function BestSelling() {
+  const [products, setProducts] = useState([])
+
+  useEffect(() => {
+    fetch('/api/public/products?limit=8&sort=ratingCount')
+      .then(r => r.json())
+      .then(data => setProducts(data.products ?? []))
+      .catch(() => {})
+  }, [])
+
+  return (
+    <div className="flex flex-col items-center pt-14">
+      <p className="text-2xl font-medium uppercase">Best Selling</p>
+      <div className="w-28 h-0.5 bg-gray-600 mb-10 mt-2"></div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mt-6 pb-14 w-full">
+        {products.map(product => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 3: Wire `components/CategoriesMarquee.jsx`**
+
+```jsx
+'use client'
+import { useEffect, useState } from 'react'
+
+export default function CategoriesMarquee() {
+  const [categories, setCategories] = useState([])
+
+  useEffect(() => {
+    fetch('/api/public/categories')
+      .then(r => r.json())
+      .then(data => setCategories(data.categories ?? []))
+      .catch(() => {})
+  }, [])
+
+  // Keep existing marquee render JSX — only the data source changes
+  return (
+    <div className="overflow-hidden py-4 bg-slate-100">
+      <div className="flex gap-8 animate-marquee whitespace-nowrap">
+        {[...categories, ...categories].map((cat, i) => (
+          <span key={i} className="text-slate-600 font-medium uppercase text-sm">{cat}</span>
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+> Adapt render JSX to match existing component exactly.
+
+- [ ] **Step 4: Commit**
+
+```
+git add components/LatestProducts.jsx components/BestSelling.jsx components/CategoriesMarquee.jsx
+git commit -m "feat: wire home components to real API (LatestProducts, BestSelling, CategoriesMarquee)"
+```
+
+---
+
+### Task 12: Wire Shop page with infinite scroll
+
+**Files:**
+- Modify: `app/(public)/shop/page.jsx`
+
+- [ ] **Step 1: Rewrite `app/(public)/shop/page.jsx`**
+
+Replace mock data with API fetching + infinite scroll pattern:
+
+```jsx
+'use client'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
+import ProductCard from '@/components/ProductCard'
+
+export default function ShopPage() {
+  const searchParams = useSearchParams()
+  const search = searchParams.get('search') || ''
+  const category = searchParams.get('category') || ''
+
+  const [products, setProducts] = useState([])
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [loading, setLoading] = useState(false)
+  const sentinelRef = useRef(null)
+
+  const fetchPage = useCallback(async (pageNum) => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({ page: pageNum, limit: 12 })
+      if (search) params.set('search', search)
+      if (category) params.set('category', category)
+      const res = await fetch(`/api/public/products?${params}`)
+      const data = await res.json()
+      setProducts(prev => pageNum === 1 ? (data.products ?? []) : [...prev, ...(data.products ?? [])])
+      setTotalPages(data.totalPages ?? 1)
+      setPage(pageNum)
+    } finally {
+      setLoading(false)
+    }
+  }, [search, category])
+
+  // Reset and reload when filters change
+  useEffect(() => {
+    fetchPage(1)
+  }, [fetchPage])
+
+  // IntersectionObserver for auto-load
+  useEffect(() => {
+    if (!sentinelRef.current) return
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && !loading && page < totalPages) {
+        fetchPage(page + 1)
+      }
+    }, { threshold: 0.1 })
+    observer.observe(sentinelRef.current)
+    return () => observer.disconnect()
+  }, [loading, page, totalPages, fetchPage])
+
+  return (
+    <div className="px-6 py-10 max-w-7xl mx-auto">
+      <h1 className="text-2xl font-medium uppercase mb-8">Shop</h1>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        {products.map(product => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </div>
+
+      {/* Sentinel div — IntersectionObserver target */}
+      <div ref={sentinelRef} className="h-4 mt-4" />
+
+      {/* Load More fallback */}
+      {page < totalPages && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={() => fetchPage(page + 1)}
+            disabled={loading}
+            className="px-8 py-2 bg-slate-800 text-white rounded hover:bg-slate-900 disabled:opacity-50"
+          >
+            {loading ? 'Loading...' : 'Load More'}
+          </button>
+        </div>
+      )}
+
+      {loading && products.length === 0 && (
+        <p className="text-center text-slate-400 mt-10">Loading products...</p>
+      )}
+
+      {!loading && products.length === 0 && (
+        <p className="text-center text-slate-400 mt-10">No products found.</p>
+      )}
+    </div>
+  )
+}
+```
+
+- [ ] **Step 2: Verify in browser**
+
+```
+npm run dev
+```
+
+Open `http://localhost:3000/shop`. Scroll to bottom — products should auto-load. "Load More" should appear as fallback. Search and category filters (if present in the URL) should re-fetch from page 1.
+
+- [ ] **Step 3: Commit**
+
+```
+git add "app/(public)/shop/page.jsx"
+git commit -m "feat: wire /shop page to real API with infinite scroll and Load More fallback"
+```
+
+---
