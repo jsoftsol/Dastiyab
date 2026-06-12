@@ -6,7 +6,7 @@ import { setCart } from '@/lib/features/cart/cartSlice'
 import { syncCart } from '@/lib/syncCart'
 
 export default function CartSync() {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const dispatch = useDispatch()
   const localCart = useSelector(state => state.cart.cartItems)
   const localCartRef = useRef(localCart)
