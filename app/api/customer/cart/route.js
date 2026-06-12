@@ -26,6 +26,10 @@ export async function PUT(req) {
 
     const { cart } = await req.json()
 
+    if (!cart || typeof cart !== 'object' || Array.isArray(cart)) {
+      return NextResponse.json({ error: 'Invalid cart' }, { status: 400 })
+    }
+
     await prisma.user.update({
       where: { id: userId },
       data: { cart },

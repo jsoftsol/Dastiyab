@@ -72,6 +72,19 @@ describe('PUT /api/customer/cart', () => {
     })
   })
 
+  it('returns 400 when cart is invalid', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    const req = new NextRequest('http://localhost/api/customer/cart', {
+      method: 'PUT',
+      body: JSON.stringify({ cart: null }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const res = await PUT(req)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toBeDefined()
+  })
+
   it('returns 500 when Prisma throws', async () => {
     getAuthUser.mockResolvedValue(USER)
     prisma.user.update.mockRejectedValue(new Error('DB error'))
