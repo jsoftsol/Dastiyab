@@ -35,11 +35,11 @@ Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors man
 | 1 | Foundation — PostgreSQL, Prisma, Cloudinary, middleware | ✅ Complete | `docs/superpowers/plans/2026-06-11-phase-1-foundation.md` |
 | 2 | Admin Panel — TailAdmin UI + 6 admin pages + API routes | ✅ Complete | `docs/superpowers/plans/2026-06-12-phase-2-admin-panel.md` |
 | 3 | Vendor Dashboard — TailAdmin UI + 4 vendor pages + Cloudinary upload | ✅ Complete | `docs/superpowers/plans/2026-06-12-phase-3-vendor-dashboard.md` |
-| 4 | Public Storefront — wire existing pages to real API routes | 🔲 Not started | _(create when Phase 3 done)_ |
+| 4 | Public Storefront — wire existing pages to real API routes | 🔄 In progress | `docs/superpowers/specs/2026-06-12-phase-4-public-storefront-design.md` |
 | 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | 🔲 Not started | _(create when Phase 4 done)_ |
 
-**Current phase:** Phase 4 — Public Storefront (not started)  
-**Last session ended:** 2026-06-12 — Project renamed from GoCart to Dastiyab. Git remote added (https://github.com/jsoftsol/Dastiyab.git) and all commits pushed. Name updated across package.json, layouts, Footer, CLAUDE.md, CONTEXT.md, README, CONTRIBUTING, create-store page, and Cloudinary upload folder.
+**Current phase:** Phase 4 — Public Storefront (design approved, implementation plan not yet written)  
+**Last session ended:** 2026-06-12 — Phase 4 design spec written and committed. API-routes + client components approach chosen for mobile-app compatibility. DB-persisted cart (`User.cart` JSON), infinite scroll + Load More fallback, full checkout flow (addresses, coupon validation, order placement, ratings). 14 new API routes across `/api/public/*` and `/api/customer/*`. Target ~75 tests.
 
 ---
 
@@ -47,7 +47,7 @@ Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors man
 
 Project renamed to **Dastiyab** and pushed to https://github.com/jsoftsol/Dastiyab.git. Phase 3 (Vendor Dashboard) is complete — all 5 vendor pages wired to real PostgreSQL data, Cloudinary upload live, 45/45 tests passing.
 
-**Immediate next step:** Phase 4 — Public Storefront. Wire existing public pages (`app/(public)/`) to real Prisma data — home, shop, product detail, cart, orders, create-store. Start with brainstorming skill.
+**Immediate next step:** Phase 4 implementation plan — invoke `writing-plans` skill to create the step-by-step plan from `docs/superpowers/specs/2026-06-12-phase-4-public-storefront-design.md`.
 
 **Before manual testing of auth:** Add Google OAuth credentials to `.env.local`:
 - `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (from Google Cloud Console)
@@ -81,6 +81,7 @@ Project renamed to **Dastiyab** and pushed to https://github.com/jsoftsol/Dastiy
 | `docs/superpowers/specs/2026-06-12-admin-panel-design.md` | Phase 2 design spec |
 | `docs/superpowers/plans/2026-06-12-phase-2-admin-panel.md` | Phase 2 implementation plan |
 | `docs/superpowers/specs/2026-06-12-vendor-dashboard-design.md` | Phase 3 design spec |
+| `docs/superpowers/specs/2026-06-12-phase-4-public-storefront-design.md` | Phase 4 design spec |
 | `docs/superpowers/plans/2026-06-12-phase-3-vendor-dashboard.md` | Phase 3 implementation plan |
 | `app/store/actions.js` | All Server Actions for vendor mutations — createProduct, updateProduct, deleteProduct, toggleInStock, updateOrderStatus |
 | `app/api/upload/route.js` | Cloudinary image upload endpoint (POST, auth-guarded) |
