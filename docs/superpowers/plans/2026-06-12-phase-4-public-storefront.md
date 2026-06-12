@@ -1950,3 +1950,359 @@ git commit -m "feat: wire /shop page to real API with infinite scroll and Load M
 ```
 
 ---
+
+## Part 4: Store Shop, Product Detail, Cart Page
+
+---
+
+### Task 13: Wire Store Shop page with infinite scroll
+
+**Files:**
+- Modify: `app/(public)/shop/[username]/page.jsx`
+
+- [ ] **Step 1: Rewrite `app/(public)/shop/[username]/page.jsx`**
+
+```jsx
+'use client'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { useParams } from 'next/navigation'
+import ProductCard from '@/components/ProductCard'
+
+export default function StoreShopPage() {
+  const { username } = useParams()
+  const [store, setStore] = useState(null)
+  const [products, setProducts] = useState([])
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+  const sentinelRef = useRef(null)
+
+  // Load first page + store info
+  useEffect(() => {
+    async function init() {
+      setLoading(true)
+      const res = await fetch(`/api/public/stores/${username}`)
+      if (!res.ok) {
+        setNotFound(true)
+        setLoading(false)
+        return
+      }
+      const data = await res.json()
+      setStore(data.store)
+      setProducts(data.products ?? [])
+      setTotalPages(data.totalPages ?? 1)
+      setPage(1)
+      setLoading(false)
+    }
+    init()
+  }, [username])
+
+  const fetchNextPage = useCallback(async () => {
+    if (loading || page >= totalPages || !store) return
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({ page: page + 1, limit: 12, storeId: store.id })
+      const res = await fetch(`/api/public/products?${params}`)
+      const data = await res.json()
+      setProducts(prev => [...prev, ...(data.products ?? [])])
+      setPage(p => p + 1)
+    } finally {
+      setLoading(false)
+    }
+  }, [loading, page, totalPages, store])
+
+  // IntersectionObserver for auto-load
+  useEffect(() => {
+    if (!sentinelRef.current) return
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && !loading && page < totalPages) {
+        fetchNextPage()
+      }
+    }, { threshold: 0.1 })
+    observer.observe(sentinelRef.current)
+    return () => observer.disconnect()
+  }, [loading, page, totalPages, fetchNextPage])
+
+  if (notFound) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <p className="text-slate-400 text-xl">Store not found or unavailable.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="px-6 py-10 max-w-7xl mx-auto">
+      {store && (
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold">{store.name}</h1>
+          <p className="text-slate-500 mt-1">{store.description}</p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        {products.map(product => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </div>
+
+      <div ref={sentinelRef} className="h-4 mt-4" />
+
+      {page < totalPages && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={fetchNextPage}
+            disabled={loading}
+            className="px-8 py-2 bg-slate-800 text-white rounded hover:bg-slate-900 disabled:opacity-50"
+          >
+            {loading ? 'Loading...' : 'Load More'}
+          </button>
+        </div>
+      )}
+
+      {!loading && products.length === 0 && store && (
+        <p className="text-center text-slate-400 mt-10">This store has no products yet.</p>
+      )}
+    </div>
+  )
+}
+```
+
+- [ ] **Step 2: Verify in browser**
+
+Open `http://localhost:3000/shop/some-username`. Should show store info and products, or "Store not found" for an invalid username.
+
+- [ ] **Step 3: Commit**
+
+```
+git add "app/(public)/shop/[username]/page.jsx"
+git commit -m "feat: wire /shop/[username] to real store API with infinite scroll"
+```
+
+---
+
+### Task 14: Wire Product Detail page + add syncCart to ProductDetails
+
+**Files:**
+- Modify: `app/(public)/product/[productId]/page.jsx`
+- Modify: `components/ProductDetails.jsx`
+- Modify: `components/Counter.jsx`
+
+- [ ] **Step 1: Rewrite `app/(public)/product/[productId]/page.jsx`**
+
+```jsx
+'use client'
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+import ProductDetails from '@/components/ProductDetails'
+
+export default function ProductPage() {
+  const { productId } = useParams()
+  const [product, setProduct] = useState(null)
+  const [notFound, setNotFound] = useState(false)
+
+  useEffect(() => {
+    async function load() {
+      const res = await fetch(`/api/public/products/${productId}`)
+      if (!res.ok) { setNotFound(true); return }
+      const data = await res.json()
+      setProduct(data.product)
+    }
+    load()
+  }, [productId])
+
+  if (notFound) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <p className="text-slate-400 text-xl">Product not found.</p>
+      </div>
+    )
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <p className="text-slate-400">Loading...</p>
+      </div>
+    )
+  }
+
+  return <ProductDetails product={product} />
+}
+```
+
+- [ ] **Step 2: Add `syncCart` call to `components/ProductDetails.jsx`**
+
+Import `syncCart` and call it after dispatching `addToCart`. The dispatch is synchronous — read updated cart from the return value using a selector pattern:
+
+```jsx
+'use client'
+import { useDispatch, useSelector } from 'react-redux'
+import { addToCart } from '@/lib/features/cart/cartSlice'
+import { syncCart } from '@/lib/syncCart'
+// ... keep all other existing imports
+
+const ProductDetails = ({ product }) => {
+  const productId = product.id
+  const cart = useSelector(state => state.cart.cartItems)
+  const dispatch = useDispatch()
+
+  const addToCartHandler = () => {
+    dispatch(addToCart({ productId }))
+    // Read updated cart: current qty + 1
+    const updatedCart = { ...cart, [productId]: (cart[productId] ?? 0) + 1 }
+    syncCart(updatedCart)
+  }
+
+  // ... rest of component unchanged
+}
+```
+
+> The cart selector gives us the pre-dispatch value. We compute the updated cart optimistically (same logic as the Redux reducer) so we can pass it to `syncCart` immediately without waiting for a re-render.
+
+- [ ] **Step 3: Add `syncCart` calls to `components/Counter.jsx`**
+
+```jsx
+'use client'
+import { useDispatch, useSelector } from 'react-redux'
+import { addToCart, removeFromCart } from '@/lib/features/cart/cartSlice'
+import { syncCart } from '@/lib/syncCart'
+
+const Counter = ({ productId }) => {
+  const { cartItems } = useSelector(state => state.cart)
+  const dispatch = useDispatch()
+
+  const addToCartHandler = () => {
+    dispatch(addToCart({ productId }))
+    const updatedCart = { ...cartItems, [productId]: (cartItems[productId] ?? 0) + 1 }
+    syncCart(updatedCart)
+  }
+
+  const removeFromCartHandler = () => {
+    dispatch(removeFromCart({ productId }))
+    const currentQty = cartItems[productId] ?? 0
+    const updatedCart = { ...cartItems }
+    if (currentQty <= 1) {
+      delete updatedCart[productId]
+    } else {
+      updatedCart[productId] = currentQty - 1
+    }
+    syncCart(updatedCart)
+  }
+
+  // ... rest of component unchanged (renders +/- buttons)
+}
+```
+
+- [ ] **Step 4: Verify in browser**
+
+Open a product page. Add to cart. Open DevTools → Network — you should see a `PUT /api/customer/cart` request fire (if logged in). Cart badge should update instantly.
+
+- [ ] **Step 5: Commit**
+
+```
+git add "app/(public)/product/[productId]/page.jsx" components/ProductDetails.jsx components/Counter.jsx
+git commit -m "feat: wire product detail page to real API, add syncCart to add/remove handlers"
+```
+
+---
+
+### Task 15: Wire Cart page + deleteItemFromCart syncCart
+
+**Files:**
+- Modify: `app/(public)/cart/page.jsx`
+
+- [ ] **Step 1: Rewrite `app/(public)/cart/page.jsx`**
+
+The cart page reads `cartItems` from Redux, fetches product details for each item in parallel, then renders the cart. Delete calls `syncCart`.
+
+```jsx
+'use client'
+import { useEffect, useState } from 'react'
+import { useSelector, useDispatch } from 'react-redux'
+import { deleteItemFromCart } from '@/lib/features/cart/cartSlice'
+import { syncCart } from '@/lib/syncCart'
+import Link from 'next/link'
+import Image from 'next/image'
+import OrderSummary from '@/components/OrderSummary'
+
+export default function CartPage() {
+  const { cartItems } = useSelector(state => state.cart)
+  const dispatch = useDispatch()
+  const [products, setProducts] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const productIds = Object.keys(cartItems)
+
+  useEffect(() => {
+    if (productIds.length === 0) {
+      setProducts([])
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    Promise.all(productIds.map(id => fetch(`/api/public/products/${id}`).then(r => r.ok ? r.json() : null)))
+      .then(results => {
+        setProducts(results.filter(Boolean).map(r => r.product))
+      })
+      .finally(() => setLoading(false))
+  }, [JSON.stringify(productIds)])
+
+  const handleDelete = (productId) => {
+    dispatch(deleteItemFromCart({ productId }))
+    const updatedCart = { ...cartItems }
+    delete updatedCart[productId]
+    syncCart(updatedCart)
+  }
+
+  if (loading) {
+    return <div className="min-h-[60vh] flex items-center justify-center"><p className="text-slate-400">Loading cart...</p></div>
+  }
+
+  if (productIds.length === 0) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+        <p className="text-slate-400 text-xl">Your cart is empty.</p>
+        <Link href="/shop" className="text-slate-800 underline">Continue shopping</Link>
+      </div>
+    )
+  }
+
+  return (
+    <div className="px-6 py-10 max-w-7xl mx-auto flex flex-col lg:flex-row gap-10">
+      {/* Cart items */}
+      <div className="flex-1">
+        <h1 className="text-2xl font-medium mb-6">Shopping Cart</h1>
+        {products.map(product => (
+          <div key={product.id} className="flex gap-4 border-b py-4 items-center">
+            <Image src={product.images?.[0] ?? ''} width={80} height={80} alt={product.name} className="rounded object-cover" />
+            <div className="flex-1">
+              <p className="font-medium">{product.name}</p>
+              <p className="text-slate-500 text-sm">Qty: {cartItems[product.id]}</p>
+              <p className="text-slate-800">Rs {(product.price * cartItems[product.id]).toLocaleString()}</p>
+            </div>
+            <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:underline text-sm">Remove</button>
+          </div>
+        ))}
+      </div>
+
+      {/* Order summary sidebar */}
+      <OrderSummary products={products} />
+    </div>
+  )
+}
+```
+
+- [ ] **Step 2: Verify in browser**
+
+Add a product to cart, navigate to `/cart`. Products should appear with names, prices, quantities. Remove button should delete item and sync to DB.
+
+- [ ] **Step 3: Commit**
+
+```
+git add "app/(public)/cart/page.jsx"
+git commit -m "feat: wire cart page to real product data via Promise.all, add syncCart on delete"
+```
+
+---
