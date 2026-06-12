@@ -211,6 +211,75 @@ Sign out and back in — you'll be routed to `/admin`.
 
 ---
 
+## Usage Guide
+
+### Customer
+
+1. Go to `/sign-in` — register with email/password or sign in with Google.
+2. Browse products at `/shop` — filter by category, search by name.
+3. Open a product to view details, images, and ratings; add it to your cart.
+4. Go to `/cart` to review items, then proceed to checkout.
+5. At checkout: add a delivery address, optionally apply a coupon code, and place a COD order.
+6. Track your orders at `/orders`; once an order is marked **Delivered** you can leave a star rating.
+
+---
+
+### Vendor
+
+**Create a store**
+
+1. Sign in (any account — customer role is the default).
+2. Go to `/create-store` and fill out the store form (name, description, etc.).
+3. Submit — the platform creates your store, upgrades your role to `vendor`, and signs you out automatically.
+4. Sign back in; you'll now have access to the vendor dashboard at `/store`.
+
+**Manage your store**
+
+| Page | Path | What you can do |
+|------|------|-----------------|
+| Dashboard | `/store` | Revenue summary, product counts, recent ratings |
+| Add product | `/store/add-product` | Create a listing with up to 4 Cloudinary images |
+| Manage products | `/store/manage-product` | Edit, delete, toggle in-stock |
+| Orders | `/store/orders` | View orders and update status (Placed → Processing → Shipped → Delivered) |
+
+> **Note:** Your store must be **approved** by an admin before products are visible to customers on the storefront.
+
+---
+
+### Admin
+
+**Become an admin**
+
+1. Sign in once to create your user record.
+2. Connect to the database and run:
+
+```sql
+UPDATE "User" SET role = 'admin' WHERE email = 'you@example.com';
+```
+
+With the local Docker setup:
+
+```bash
+docker exec -it gocart_db psql -U postgres -d gocart \
+  -c "UPDATE \"User\" SET role = 'admin' WHERE email = 'you@example.com';"
+```
+
+3. Sign out and sign back in — the JWT is refreshed with the new role.
+4. Go to `/admin`.
+
+**Admin capabilities**
+
+| Page | Path | What you can do |
+|------|------|-----------------|
+| Dashboard | `/admin` | Platform KPIs — orders, GMV, user count, pending approvals |
+| Stores | `/admin/stores` | Toggle any store active / inactive |
+| Approve | `/admin/approve` | Approve or reject pending vendor applications |
+| Coupons | `/admin/coupons` | Create and delete coupon codes (percentage-off, expiry, audience targeting) |
+| Orders | `/admin/orders` | View all orders across all stores; override status |
+| Users | `/admin/users` | View all user accounts and their roles |
+
+---
+
 ## Testing
 
 ```bash
