@@ -5,11 +5,14 @@ vi.mock('@/lib/prisma', () => ({
     product: {
       findMany: vi.fn(),
       count: vi.fn(),
+      findUnique: vi.fn(),
     },
   },
 }))
 
 import { GET } from '@/app/api/public/products/route'
+import { GET as getById } from '@/app/api/public/products/[id]/route'
+import { GET as getCategories } from '@/app/api/public/categories/route'
 import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma'
 
@@ -137,5 +140,40 @@ describe('GET /api/public/products', () => {
     expect(res.status).toBe(500)
     const body = await res.json()
     expect(body.error).toBeDefined()
+  })
+})
+
+describe('GET /api/public/products/[id]', () => {
+  it('returns product with ratings and store', async () => {
+    prisma.product.findUnique.mockResolvedValue(PRODUCT)
+    const req = new NextRequest('http://localhost/api/public/products/prod_1')
+    const res = await getById(req, { params: Promise.resolve({ id: 'prod_1' }) })
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.product.id).toBe('prod_1')
+    expect(body.product.rating).toHaveLength(2)
+  })
+
+  it('returns 404 when product not found', async () => {
+    prisma.product.findUnique.mockResolvedValue(null)
+    const req = new NextRequest('http://localhost/api/public/products/bad_id')
+    const res = await getById(req, { params: Promise.resolve({ id: 'bad_id' }) })
+    expect(res.status).toBe(404)
+    const body = await res.json()
+    expect(body.error).toBeDefined()
+  })
+})
+
+describe('GET /api/public/categories', () => {
+  it('returns distinct categories', async () => {
+    prisma.product.findMany.mockResolvedValue([
+      { category: 'Headphones' },
+      { category: 'Watch' },
+    ])
+    const req = new NextRequest('http://localhost/api/public/categories')
+    const res = await getCategories(req)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.categories).toEqual(['Headphones', 'Watch'])
   })
 })
