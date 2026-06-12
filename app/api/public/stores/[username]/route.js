@@ -8,11 +8,22 @@ export async function GET(req, { params }) {
     const page = Math.max(1, parseInt(searchParams.get('page'), 10) || 1)
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit'), 10) || 12))
 
-    const store = await prisma.store.findUnique({ where: { username } })
+    const storeRecord = await prisma.store.findUnique({
+      where: { username },
+      select: {
+        id: true, name: true, username: true, description: true,
+        address: true, logo: true, email: true, contact: true,
+        createdAt: true, updatedAt: true,
+        status: true, isActive: true,
+      },
+    })
 
-    if (!store || store.status !== 'approved' || !store.isActive) {
+    if (!storeRecord || storeRecord.status !== 'approved' || !storeRecord.isActive) {
       return NextResponse.json({ error: 'Store not found' }, { status: 404 })
     }
+
+    // Strip internal fields before returning to client
+    const { status, isActive, ...store } = storeRecord
 
     const [products, total] = await Promise.all([
       prisma.product.findMany({

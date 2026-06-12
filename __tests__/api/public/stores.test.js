@@ -79,4 +79,13 @@ describe('GET /api/public/stores/[username]', () => {
     const res = await GET(req, { params: Promise.resolve({ username: 'teststore' }) })
     expect(res.status).toBe(404)
   })
+
+  it('returns 500 when Prisma throws', async () => {
+    prisma.store.findUnique.mockRejectedValue(new Error('DB error'))
+    const req = new NextRequest('http://localhost/api/public/stores/teststore')
+    const res = await GET(req, { params: Promise.resolve({ username: 'teststore' }) })
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.error).toBeDefined()
+  })
 })
