@@ -38,8 +38,8 @@ Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors man
 | 4 | Public Storefront — wire existing pages to real API routes | ✅ Complete | `docs/superpowers/specs/2026-06-12-phase-4-public-storefront-design.md` |
 | 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | ✅ Complete | `docs/superpowers/specs/2026-06-12-phase-5-platform-services-design.md` |
 
-**Current phase:** Phase 5 — Platform Services ✅ Complete — all phases done  
-**Last session ended:** 2026-06-12 — Phase 5 complete. Coupon flag enforcement (isPublic, forMember, forNewUser) in validate + orders routes. On-the-fly averageRating/ratingCount aggregation in products list + detail routes. 120/120 tests passing.
+**Current phase:** Deployment — Docker + GitHub Actions CI/CD ✅ Complete  
+**Last session ended:** 2026-06-12 — Deployment infrastructure complete. Dockerfile (multi-stage, Node 24), docker-compose.prod.yml, GitHub Actions deploy workflow. Three build fixes required during first deploy attempt: (1) dummy DATABASE_URL for prisma generate in builder stage, (2) export const dynamic = 'force-dynamic' on all 11 admin/store pages (Next.js was trying to pre-render them at build time), (3) chmod 600 + set -e + correct postgres → migrate → app ordering in deploy script.
 
 ---
 
@@ -53,7 +53,7 @@ Phase 4 (Public Storefront) is complete. All pages are wired to real PostgreSQL 
 - Create Store — `POST /api/public/stores` (creates store, sets vendor role, signOut), `GET /api/customer/store`
 - CartSync hydrates Redux cart from DB on login
 
-**Immediate next step:** All 5 phases complete. Platform is feature-complete for v1. Deployment infrastructure is live (Docker, GitHub Actions). Consider: VPS pre-deployment checklist, or starting v2 features (Stripe, analytics, email notifications).
+**Immediate next step:** All 5 phases complete + deployment infrastructure done. Monitor the GitHub Actions workflow for success after the latest push. Once the deploy workflow passes, the app is live on VPS. Next: manual end-to-end testing on production, or v2 features (Stripe, analytics, email notifications).
 
 **Before manual testing of auth:** Add Google OAuth credentials to `.env.local`:
 - `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (from Google Cloud Console)
@@ -65,15 +65,19 @@ Phase 4 (Public Storefront) is complete. All pages are wired to real PostgreSQL 
 
 ## Deployment Infrastructure (2026-06-12)
 
-**Status:** Complete
+**Status:** Complete — deploy workflow running (last push: f65fd8c)
 
 Files added:
-- `Dockerfile` — multi-stage build (deps → builder → runner), Node 24 alpine, Next.js standalone output
-- `docker-compose.prod.yml` — three services: postgres, app (runner stage), migrate (builder stage)
-- `.github/workflows/deploy.yml` — push to `deploy` branch triggers rsync + SSH docker compose up + migrate
-- `prisma/migrations/` — initial migration generated via `prisma migrate diff`
-- `.dockerignore` — excludes build/secret files from Docker context
-- `.env.example` — documents all required production env vars
+- `Dockerfile` — multi-stage build (deps → builder → runner), Node 24 alpine, Next.js standalone output. Builder stage sets `ENV DATABASE_URL` to a dummy value so `prisma generate` loads `prisma.config.ts` without error (Prisma 7's `env()` is strict — throws if var missing even during generate).
+- `docker-compose.prod.yml` — three services: postgres (healthcheck), app (runner stage), migrate (builder stage, exits after run)
+- `.github/workflows/deploy.yml` — push to `deploy` branch → rsync → SSH: `set -e`, write `.env.production` + `chmod 600`, start postgres → run migrate → start app `--build`, `docker image prune -f`
+- `prisma/migrations/20260612000000_init/migration.sql` — generated via `prisma migrate diff --from-empty`
+- `.dockerignore`, `.env.example`
+
+**Fixes applied during first deploy attempt:**
+1. `Dockerfile` — added `ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"` in builder before `prisma generate`
+2. All 11 admin/store pages — added `export const dynamic = 'force-dynamic'` (Next.js pre-renders server components at build time; without this, pages tried to query a non-existent DB)
+3. `deploy.yml` — added `chmod 600`, `set -e`, split `up -d --build` into postgres → migrate → app ordering
 
 **GitHub secrets required:** SERVER_HOST, SERVER_USER, SERVER_SSH_KEY, SERVER_APP_DIR, PRODUCTION_ENV
 
