@@ -23,7 +23,12 @@ export async function GET(req, { params }) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ product })
+    const ratingCount = product.rating.length
+    const averageRating = ratingCount
+      ? Math.round((product.rating.reduce((sum, r) => sum + r.rating, 0) / ratingCount) * 10) / 10
+      : 0
+
+    return NextResponse.json({ product: { ...product, averageRating, ratingCount } })
   } catch (err) {
     console.error('[GET /api/public/products/[id]]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

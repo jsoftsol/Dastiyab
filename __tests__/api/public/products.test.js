@@ -141,6 +141,35 @@ describe('GET /api/public/products', () => {
     const body = await res.json()
     expect(body.error).toBeDefined()
   })
+
+  it('returns averageRating and ratingCount computed from ratings', async () => {
+    prisma.product.findMany.mockResolvedValue([PRODUCT])
+    prisma.product.count.mockResolvedValue(1)
+    const req = new NextRequest('http://localhost/api/public/products')
+    const res = await GET(req)
+    const body = await res.json()
+    expect(body.products[0].averageRating).toBe(4.5)
+    expect(body.products[0].ratingCount).toBe(2)
+  })
+
+  it('does not include raw rating array in list response', async () => {
+    prisma.product.findMany.mockResolvedValue([PRODUCT])
+    prisma.product.count.mockResolvedValue(1)
+    const req = new NextRequest('http://localhost/api/public/products')
+    const res = await GET(req)
+    const body = await res.json()
+    expect(body.products[0].rating).toBeUndefined()
+  })
+
+  it('returns averageRating 0 and ratingCount 0 for products with no ratings', async () => {
+    prisma.product.findMany.mockResolvedValue([{ ...PRODUCT, rating: [] }])
+    prisma.product.count.mockResolvedValue(1)
+    const req = new NextRequest('http://localhost/api/public/products')
+    const res = await GET(req)
+    const body = await res.json()
+    expect(body.products[0].averageRating).toBe(0)
+    expect(body.products[0].ratingCount).toBe(0)
+  })
 })
 
 describe('GET /api/public/products/[id]', () => {
@@ -161,6 +190,25 @@ describe('GET /api/public/products/[id]', () => {
     expect(res.status).toBe(404)
     const body = await res.json()
     expect(body.error).toBeDefined()
+  })
+
+  it('returns averageRating and ratingCount alongside full rating array', async () => {
+    prisma.product.findUnique.mockResolvedValue(PRODUCT)
+    const req = new NextRequest('http://localhost/api/public/products/prod_1')
+    const res = await getById(req, { params: Promise.resolve({ id: 'prod_1' }) })
+    const body = await res.json()
+    expect(body.product.averageRating).toBe(4.5)
+    expect(body.product.ratingCount).toBe(2)
+    expect(body.product.rating).toHaveLength(2)
+  })
+
+  it('returns averageRating 0 and ratingCount 0 for product with no ratings', async () => {
+    prisma.product.findUnique.mockResolvedValue({ ...PRODUCT, rating: [] })
+    const req = new NextRequest('http://localhost/api/public/products/prod_1')
+    const res = await getById(req, { params: Promise.resolve({ id: 'prod_1' }) })
+    const body = await res.json()
+    expect(body.product.averageRating).toBe(0)
+    expect(body.product.ratingCount).toBe(0)
   })
 })
 

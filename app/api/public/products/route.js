@@ -34,8 +34,16 @@ export async function GET(req) {
       prisma.product.count({ where }),
     ])
 
+    const enrichedProducts = products.map(({ rating, ...product }) => ({
+      ...product,
+      ratingCount: rating.length,
+      averageRating: rating.length
+        ? Math.round((rating.reduce((sum, r) => sum + r.rating, 0) / rating.length) * 10) / 10
+        : 0,
+    }))
+
     return NextResponse.json({
-      products,
+      products: enrichedProducts,
       total,
       page,
       totalPages: Math.ceil(total / limit),
