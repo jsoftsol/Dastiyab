@@ -10,8 +10,6 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Coupon code is required' }, { status: 400 })
     }
 
-    const { userId } = await getAuthUser()
-
     const coupon = await prisma.coupon.findUnique({
       where: { code: code.trim().toUpperCase() },
     })
@@ -24,6 +22,8 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Coupon has expired' }, { status: 400 })
     }
 
+    const { userId } = await getAuthUser()
+
     if (!coupon.isPublic) {
       return NextResponse.json({ error: 'This coupon is not available' }, { status: 400 })
     }
@@ -32,11 +32,11 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Sign in to use this coupon' }, { status: 400 })
     }
 
-    if (coupon.forNewUser && !userId) {
-      return NextResponse.json({ error: 'Sign in to use this coupon' }, { status: 400 })
-    }
-
-    if (coupon.forNewUser && userId) {
+    if (coupon.forNewUser) {
+      if (!userId) {
+        return NextResponse.json({ error: 'Sign in to use this coupon' }, { status: 400 })
+      }
+      // platform-wide: forNewUser means first order ever across all stores
       const orderCount = await prisma.order.count({ where: { userId } })
       if (orderCount > 0) {
         return NextResponse.json({ error: 'This coupon is for new customers only' }, { status: 400 })
