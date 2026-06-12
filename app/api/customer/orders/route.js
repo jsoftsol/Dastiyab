@@ -74,6 +74,16 @@ export async function POST(req) {
       if (!coupon || new Date(coupon.expiresAt) < new Date()) {
         return NextResponse.json({ error: 'Coupon is invalid or expired' }, { status: 400 })
       }
+      if (!coupon.isPublic) {
+        return NextResponse.json({ error: 'This coupon is not available' }, { status: 400 })
+      }
+      if (coupon.forNewUser) {
+        // platform-wide: forNewUser means first order ever across all stores
+        const orderCount = await prisma.order.count({ where: { userId } })
+        if (orderCount > 0) {
+          return NextResponse.json({ error: 'This coupon is for new customers only' }, { status: 400 })
+        }
+      }
       discountRate = coupon.discount / 100
       couponData = { code: coupon.code, discount: coupon.discount, description: coupon.description }
     }

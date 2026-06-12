@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('@/lib/auth', () => ({ getAuthUser: vi.fn() }))
 vi.mock('@/lib/prisma', () => ({
   default: {
-    order: { findMany: vi.fn(), create: vi.fn() },
+    order: { findMany: vi.fn(), create: vi.fn(), count: vi.fn() },
     product: { findMany: vi.fn() },
     coupon: { findUnique: vi.fn() },
     user: { update: vi.fn() },
@@ -110,7 +110,7 @@ describe('POST /api/customer/orders', () => {
 
   it('returns 400 when a product is not found', async () => {
     getAuthUser.mockResolvedValue(USER)
-    prisma.product.findMany.mockResolvedValue([]) // empty — product not found
+    prisma.product.findMany.mockResolvedValue([])
     const res = await POST(makeReq({ addressId: 'addr_1', items: [{ productId: 'nonexistent', quantity: 1 }] }))
     expect(res.status).toBe(400)
     const body = await res.json()
@@ -133,10 +133,59 @@ describe('POST /api/customer/orders', () => {
     prisma.address.findFirst.mockResolvedValue({ id: 'addr_1' })
     prisma.coupon.findUnique.mockResolvedValue({
       code: 'SAVE10', discount: 10, description: '10% off',
+      isPublic: true, forNewUser: false, forMember: false,
       expiresAt: new Date(Date.now() - 86400000),
     })
     const res = await POST(makeReq({ addressId: 'addr_1', couponCode: 'SAVE10', items: [{ productId: 'prod_1', quantity: 1 }] }))
     expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when non-public coupon is used at order time', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.product.findMany.mockResolvedValue([PRODUCT])
+    prisma.address.findFirst.mockResolvedValue({ id: 'addr_1' })
+    prisma.coupon.findUnique.mockResolvedValue({
+      code: 'PRIVATE', discount: 20, description: 'Private coupon',
+      isPublic: false, forNewUser: false, forMember: false,
+      expiresAt: new Date(Date.now() + 86400000),
+    })
+    const res = await POST(makeReq({ addressId: 'addr_1', couponCode: 'PRIVATE', items: [{ productId: 'prod_1', quantity: 1 }] }))
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/not available/i)
+  })
+
+  it('returns 400 when forNewUser coupon used by returning customer at order time', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.product.findMany.mockResolvedValue([PRODUCT])
+    prisma.address.findFirst.mockResolvedValue({ id: 'addr_1' })
+    prisma.coupon.findUnique.mockResolvedValue({
+      code: 'WELCOME10', discount: 10, description: 'New user discount',
+      isPublic: true, forNewUser: true, forMember: false,
+      expiresAt: new Date(Date.now() + 86400000),
+    })
+    prisma.order.count.mockResolvedValue(3)
+    const res = await POST(makeReq({ addressId: 'addr_1', couponCode: 'WELCOME10', items: [{ productId: 'prod_1', quantity: 1 }] }))
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/new customers/i)
+  })
+
+  it('accepts forNewUser coupon for first-time buyer at order time', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.product.findMany.mockResolvedValue([PRODUCT])
+    prisma.address.findFirst.mockResolvedValue({ id: 'addr_1' })
+    prisma.coupon.findUnique.mockResolvedValue({
+      code: 'WELCOME10', discount: 10, description: 'New user discount',
+      isPublic: true, forNewUser: true, forMember: false,
+      expiresAt: new Date(Date.now() + 86400000),
+    })
+    prisma.order.count.mockResolvedValue(0)
+    prisma.$transaction.mockImplementation(async (fn) => fn(prisma))
+    prisma.order.create.mockResolvedValue(ORDER)
+    prisma.user.update.mockResolvedValue({})
+    const res = await POST(makeReq({ addressId: 'addr_1', couponCode: 'WELCOME10', items: [{ productId: 'prod_1', quantity: 1 }] }))
+    expect(res.status).toBe(201)
   })
 
   it('returns 500 when Prisma throws', async () => {
