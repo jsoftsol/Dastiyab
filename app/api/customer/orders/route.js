@@ -70,12 +70,15 @@ export async function POST(req) {
     let couponData = {}
     let discountRate = 0
     if (couponCode) {
-      const coupon = await prisma.coupon.findUnique({ where: { code: couponCode.toUpperCase() } })
+      const coupon = await prisma.coupon.findUnique({ where: { code: couponCode.trim().toUpperCase() } })
       if (!coupon || new Date(coupon.expiresAt) < new Date()) {
         return NextResponse.json({ error: 'Coupon is invalid or expired' }, { status: 400 })
       }
       if (!coupon.isPublic) {
         return NextResponse.json({ error: 'This coupon is not available' }, { status: 400 })
+      }
+      if (coupon.forMember && !userId) {
+        return NextResponse.json({ error: 'Sign in to use this coupon' }, { status: 400 })
       }
       if (coupon.forNewUser) {
         // platform-wide: forNewUser means first order ever across all stores
