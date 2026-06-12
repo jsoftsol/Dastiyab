@@ -1,5 +1,6 @@
 'use client'
 import { addToCart, removeFromCart } from "@/lib/features/cart/cartSlice";
+import { syncCart } from "@/lib/syncCart";
 import { useDispatch, useSelector } from "react-redux";
 
 const Counter = ({ productId }) => {
@@ -10,10 +11,20 @@ const Counter = ({ productId }) => {
 
     const addToCartHandler = () => {
         dispatch(addToCart({ productId }))
+        const updatedCart = { ...cartItems, [productId]: (cartItems[productId] ?? 0) + 1 }
+        syncCart(updatedCart)
     }
 
     const removeFromCartHandler = () => {
         dispatch(removeFromCart({ productId }))
+        const currentQty = cartItems[productId] ?? 0
+        const updatedCart = { ...cartItems }
+        if (currentQty <= 1) {
+            delete updatedCart[productId]
+        } else {
+            updatedCart[productId] = currentQty - 1
+        }
+        syncCart(updatedCart)
     }
 
     return (

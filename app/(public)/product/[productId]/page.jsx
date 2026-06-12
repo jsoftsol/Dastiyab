@@ -1,43 +1,56 @@
 'use client'
-import ProductDescription from "@/components/ProductDescription";
-import ProductDetails from "@/components/ProductDetails";
-import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+import ProductDetails from '@/components/ProductDetails'
+import ProductDescription from '@/components/ProductDescription'
 
-export default function Product() {
+export default function ProductPage() {
+  const { productId } = useParams()
+  const [product, setProduct] = useState(null)
+  const [notFound, setNotFound] = useState(false)
 
-    const { productId } = useParams();
-    const [product, setProduct] = useState();
-    const products = useSelector(state => state.product.list);
-
-    const fetchProduct = async () => {
-        const product = products.find((product) => product.id === productId);
-        setProduct(product);
+  useEffect(() => {
+    async function load() {
+      const res = await fetch(`/api/public/products/${productId}`)
+      if (!res.ok) { setNotFound(true); return }
+      const data = await res.json()
+      setProduct(data.product)
     }
+    load()
+    scrollTo(0, 0)
+  }, [productId])
 
-    useEffect(() => {
-        if (products.length > 0) {
-            fetchProduct()
-        }
-        scrollTo(0, 0)
-    }, [productId,products]);
-
+  if (notFound) {
     return (
-        <div className="mx-6">
-            <div className="max-w-7xl mx-auto">
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <p className="text-slate-400 text-xl">Product not found.</p>
+      </div>
+    )
+  }
 
-                {/* Breadcrums */}
-                <div className="  text-gray-600 text-sm mt-8 mb-5">
-                    Home / Products / {product?.category}
-                </div>
+  if (!product) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <p className="text-slate-400">Loading...</p>
+      </div>
+    )
+  }
 
-                {/* Product Details */}
-                {product && (<ProductDetails product={product} />)}
+  return (
+    <div className="mx-6">
+      <div className="max-w-7xl mx-auto">
 
-                {/* Description & Reviews */}
-                {product && (<ProductDescription product={product} />)}
-            </div>
+        {/* Breadcrumbs */}
+        <div className="text-gray-600 text-sm mt-8 mb-5">
+          Home / Products / {product.category}
         </div>
-    );
+
+        {/* Product Details */}
+        <ProductDetails product={product} />
+
+        {/* Description & Reviews */}
+        <ProductDescription product={product} />
+      </div>
+    </div>
+  )
 }

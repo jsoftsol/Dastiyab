@@ -1,6 +1,7 @@
 'use client'
 
 import { addToCart } from "@/lib/features/cart/cartSlice";
+import { syncCart } from "@/lib/syncCart";
 import { StarIcon, TagIcon, EarthIcon, CreditCardIcon, UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -22,6 +23,8 @@ const ProductDetails = ({ product }) => {
 
     const addToCartHandler = () => {
         dispatch(addToCart({ productId }))
+        const updatedCart = { ...cart, [productId]: (cart[productId] ?? 0) + 1 }
+        syncCart(updatedCart)
     }
 
     const averageRating = product.rating.reduce((acc, item) => acc + item.rating, 0) / product.rating.length;
