@@ -36,10 +36,10 @@ Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors man
 | 2 | Admin Panel — TailAdmin UI + 6 admin pages + API routes | ✅ Complete | `docs/superpowers/plans/2026-06-12-phase-2-admin-panel.md` |
 | 3 | Vendor Dashboard — TailAdmin UI + 4 vendor pages + Cloudinary upload | ✅ Complete | `docs/superpowers/plans/2026-06-12-phase-3-vendor-dashboard.md` |
 | 4 | Public Storefront — wire existing pages to real API routes | ✅ Complete | `docs/superpowers/specs/2026-06-12-phase-4-public-storefront-design.md` |
-| 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | 🔄 In progress | `docs/superpowers/specs/2026-06-12-phase-5-platform-services-design.md` |
+| 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | ✅ Complete | `docs/superpowers/specs/2026-06-12-phase-5-platform-services-design.md` |
 
-**Current phase:** Phase 5 — Platform Services (design approved, implementation plan next)  
-**Last session ended:** 2026-06-12 — Phase 5 design spec written and approved. Two workstreams: (1) coupon flag enforcement (`forNewUser`, `forMember`, `isPublic`) in validate + orders routes; (2) on-the-fly `averageRating`/`ratingCount` aggregation in products list + detail routes. No schema changes.
+**Current phase:** Phase 5 — Platform Services ✅ Complete — all phases done  
+**Last session ended:** 2026-06-12 — Phase 5 complete. Coupon flag enforcement (isPublic, forMember, forNewUser) in validate + orders routes. On-the-fly averageRating/ratingCount aggregation in products list + detail routes. 120/120 tests passing.
 
 ---
 
@@ -53,7 +53,7 @@ Phase 4 (Public Storefront) is complete. All pages are wired to real PostgreSQL 
 - Create Store — `POST /api/public/stores` (creates store, sets vendor role, signOut), `GET /api/customer/store`
 - CartSync hydrates Redux cart from DB on login
 
-**Immediate next step:** Write Phase 5 implementation plan, then execute it.
+**Immediate next step:** All 5 phases complete. Platform is feature-complete for v1. Consider: manual end-to-end testing, VPS deployment, or starting v2 features (Stripe, analytics, email notifications).
 
 **Before manual testing of auth:** Add Google OAuth credentials to `.env.local`:
 - `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (from Google Cloud Console)
@@ -104,7 +104,7 @@ Phase 4 (Public Storefront) is complete. All pages are wired to real PostgreSQL 
 - **No admin/vendor API routes** — mutations use Server Actions; only `/api/auth/*`, `/api/auth/register`, `/api/upload` exist
 - **Public API routes** — `/api/public/products`, `/api/public/products/[id]`, `/api/public/categories`, `/api/public/stores/[username]`, `/api/public/stores` (POST), `/api/public/coupons/validate`
 - **Customer API routes** — `/api/customer/cart`, `/api/customer/addresses`, `/api/customer/addresses/[id]`, `/api/customer/orders`, `/api/customer/ratings`, `/api/customer/store`
-- **106 tests passing** — 15 test files: all Phase 1-4 routes covered
+- **120 tests passing** — 15 test files: all Phase 1-5 routes covered
 - **Docker PostgreSQL running** — `gocart_db` container, schema pushed
 - **Prisma 7** — `@prisma/adapter-pg`, generated client at `prisma/generated/prisma/`, config in `prisma.config.ts`
 - **Next.js 16.2.9** — server components + Server Actions pattern throughout admin + vendor panels
@@ -220,6 +220,16 @@ app/store/edit-product/[id]/  EditProductClient.jsx
 - [x] Task 17 — `app/(public)/orders/page.jsx` + `OrderItem.jsx` + `RatingModal.jsx` — orders list + POST rating; fixed toast.promise bug + 0-star validation
 - [x] Task 18 — `app/(public)/create-store/page.jsx` + `app/api/customer/store/route.js` + `app/api/public/stores/route.js` — store creation flow, vendor role update, signOut
 - [x] Tests — 106/106 passing (all new API routes covered, no regressions)
+
+---
+
+## Phase 5 Checklist ✅ Complete — Platform Services
+
+- [x] Task 1 — `app/api/public/coupons/validate/route.js` — enforce isPublic, forMember, forNewUser flags; auth-aware via getAuthUser()
+- [x] Task 2 — `app/api/customer/orders/route.js` — re-check isPublic and forNewUser at order placement as security backstop
+- [x] Task 3 — `app/api/public/products/route.js` — compute averageRating + ratingCount, strip raw rating array from list response
+- [x] Task 3 — `app/api/public/products/[id]/route.js` — compute averageRating + ratingCount, keep full rating array in detail response
+- [x] Tests — 120/120 passing (added 14 new tests across 3 test files)
 
 ---
 
