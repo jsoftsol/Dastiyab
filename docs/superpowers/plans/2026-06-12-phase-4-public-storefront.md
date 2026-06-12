@@ -693,4 +693,812 @@ git commit -m "feat: add POST /api/public/coupons/validate"
 
 ---
 
-<!-- PLAN CONTINUES — Tasks 5–18 to be written in subsequent parts -->
+## Task 5: Cart API
+
+**Files:**
+- Create: `app/api/customer/cart/route.js`
+- Create: `__tests__/api/customer/cart.test.js`
+
+- [ ] **Step 1: Write the failing test**
+
+```js
+// __tests__/api/customer/cart.test.js
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+vi.mock('@/lib/auth', () => ({ getAuthUser: vi.fn() }))
+vi.mock('@/lib/prisma', () => ({
+  default: {
+    user: { findUnique: vi.fn(), update: vi.fn() },
+  },
+}))
+
+import { GET, PUT } from '@/app/api/customer/cart/route'
+import { NextRequest } from 'next/server'
+import { getAuthUser } from '@/lib/auth'
+import prisma from '@/lib/prisma'
+
+const USER = { userId: 'user_1' }
+
+beforeEach(() => vi.clearAllMocks())
+
+describe('GET /api/customer/cart', () => {
+  it('returns empty cart for unauthenticated users', async () => {
+    getAuthUser.mockResolvedValue({ userId: null })
+    const req = new NextRequest('http://localhost/api/customer/cart')
+    const res = await GET(req)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.cart).toEqual({})
+  })
+
+  it('returns DB cart for authenticated user', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.user.findUnique.mockResolvedValue({ cart: { prod_1: 2 } })
+    const req = new NextRequest('http://localhost/api/customer/cart')
+    const res = await GET(req)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.cart).toEqual({ prod_1: 2 })
+  })
+})
+
+describe('PUT /api/customer/cart', () => {
+  it('returns 401 when not authenticated', async () => {
+    getAuthUser.mockResolvedValue({ userId: null })
+    const req = new NextRequest('http://localhost/api/customer/cart', {
+      method: 'PUT',
+      body: JSON.stringify({ cart: { prod_1: 1 } }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const res = await PUT(req)
+    expect(res.status).toBe(401)
+  })
+
+  it('syncs cart to DB for authenticated user', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.user.update.mockResolvedValue({})
+    const req = new NextRequest('http://localhost/api/customer/cart', {
+      method: 'PUT',
+      body: JSON.stringify({ cart: { prod_1: 3 } }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const res = await PUT(req)
+    expect(res.status).toBe(200)
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user_1' },
+      data: { cart: { prod_1: 3 } },
+    })
+  })
+})
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+```
+npx vitest run __tests__/api/customer/cart.test.js
+```
+
+Expected: FAIL — missing module
+
+- [ ] **Step 3: Create the route**
+
+```js
+// app/api/customer/cart/route.js
+import { NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
+import { getAuthUser } from '@/lib/auth'
+
+export async function GET() {
+  const { userId } = await getAuthUser()
+  if (!userId) return NextResponse.json({ cart: {} })
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { cart: true },
+  })
+
+  return NextResponse.json({ cart: user?.cart || {} })
+}
+
+export async function PUT(req) {
+  const { userId } = await getAuthUser()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { cart } = await req.json()
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { cart },
+  })
+
+  return NextResponse.json({ success: true })
+}
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+```
+npx vitest run __tests__/api/customer/cart.test.js
+```
+
+Expected: 4 tests PASS
+
+- [ ] **Step 5: Commit**
+
+```
+git add app/api/customer/cart/route.js __tests__/api/customer/cart.test.js
+git commit -m "feat: add GET|PUT /api/customer/cart"
+```
+
+---
+
+## Task 6: Addresses API
+
+**Files:**
+- Create: `app/api/customer/addresses/route.js`
+- Create: `app/api/customer/addresses/[id]/route.js`
+- Create: `__tests__/api/customer/addresses.test.js`
+
+- [ ] **Step 1: Write the failing test**
+
+```js
+// __tests__/api/customer/addresses.test.js
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+vi.mock('@/lib/auth', () => ({ getAuthUser: vi.fn() }))
+vi.mock('@/lib/prisma', () => ({
+  default: {
+    address: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      delete: vi.fn(),
+    },
+  },
+}))
+
+import { GET, POST } from '@/app/api/customer/addresses/route'
+import { DELETE } from '@/app/api/customer/addresses/[id]/route'
+import { NextRequest } from 'next/server'
+import { getAuthUser } from '@/lib/auth'
+import prisma from '@/lib/prisma'
+
+const USER = { userId: 'user_1' }
+const ADDRESS = {
+  id: 'addr_1',
+  userId: 'user_1',
+  name: 'Home',
+  email: 'user@test.com',
+  street: '123 Main St',
+  city: 'Karachi',
+  state: 'Sindh',
+  zip: '75000',
+  country: 'Pakistan',
+  phone: '03001234567',
+  createdAt: new Date(),
+}
+
+beforeEach(() => vi.clearAllMocks())
+
+describe('GET /api/customer/addresses', () => {
+  it('returns 401 when not authenticated', async () => {
+    getAuthUser.mockResolvedValue({ userId: null })
+    const res = await GET()
+    expect(res.status).toBe(401)
+  })
+
+  it('returns list of addresses', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.address.findMany.mockResolvedValue([ADDRESS])
+    const res = await GET()
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.addresses).toHaveLength(1)
+  })
+})
+
+describe('POST /api/customer/addresses', () => {
+  it('returns 401 when not authenticated', async () => {
+    getAuthUser.mockResolvedValue({ userId: null })
+    const req = new NextRequest('http://localhost/api/customer/addresses', {
+      method: 'POST',
+      body: JSON.stringify(ADDRESS),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 400 when required fields are missing', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    const req = new NextRequest('http://localhost/api/customer/addresses', {
+      method: 'POST',
+      body: JSON.stringify({ name: 'Home' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(400)
+  })
+
+  it('creates and returns new address', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.address.create.mockResolvedValue(ADDRESS)
+    const req = new NextRequest('http://localhost/api/customer/addresses', {
+      method: 'POST',
+      body: JSON.stringify({ name: 'Home', email: 'user@test.com', street: '123 Main St', city: 'Karachi', state: 'Sindh', zip: '75000', country: 'Pakistan', phone: '03001234567' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body.address.id).toBe('addr_1')
+    expect(prisma.address.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ userId: 'user_1', name: 'Home' }),
+    })
+  })
+})
+
+describe('DELETE /api/customer/addresses/[id]', () => {
+  it('returns 401 when not authenticated', async () => {
+    getAuthUser.mockResolvedValue({ userId: null })
+    const req = new NextRequest('http://localhost/api/customer/addresses/addr_1', { method: 'DELETE' })
+    const res = await DELETE(req, { params: Promise.resolve({ id: 'addr_1' }) })
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 404 when address belongs to a different user', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.address.findUnique.mockResolvedValue({ ...ADDRESS, userId: 'other_user' })
+    const req = new NextRequest('http://localhost/api/customer/addresses/addr_1', { method: 'DELETE' })
+    const res = await DELETE(req, { params: Promise.resolve({ id: 'addr_1' }) })
+    expect(res.status).toBe(404)
+    expect(prisma.address.delete).not.toHaveBeenCalled()
+  })
+
+  it('deletes address and returns success', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.address.findUnique.mockResolvedValue(ADDRESS)
+    prisma.address.delete.mockResolvedValue(ADDRESS)
+    const req = new NextRequest('http://localhost/api/customer/addresses/addr_1', { method: 'DELETE' })
+    const res = await DELETE(req, { params: Promise.resolve({ id: 'addr_1' }) })
+    expect(res.status).toBe(200)
+    expect(prisma.address.delete).toHaveBeenCalledWith({ where: { id: 'addr_1' } })
+  })
+})
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+```
+npx vitest run __tests__/api/customer/addresses.test.js
+```
+
+Expected: FAIL — missing modules
+
+- [ ] **Step 3: Create `app/api/customer/addresses/route.js`**
+
+```js
+// app/api/customer/addresses/route.js
+import { NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
+import { getAuthUser } from '@/lib/auth'
+
+export async function GET() {
+  const { userId } = await getAuthUser()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const addresses = await prisma.address.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  return NextResponse.json({ addresses })
+}
+
+export async function POST(req) {
+  const { userId } = await getAuthUser()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { name, email, street, city, state, zip, country, phone } = await req.json()
+
+  if (!name || !email || !street || !city || !state || !zip || !country || !phone) {
+    return NextResponse.json({ error: 'All address fields are required' }, { status: 400 })
+  }
+
+  const address = await prisma.address.create({
+    data: { userId, name, email, street, city, state, zip, country, phone },
+  })
+
+  return NextResponse.json({ address }, { status: 201 })
+}
+```
+
+- [ ] **Step 4: Create `app/api/customer/addresses/[id]/route.js`**
+
+```js
+// app/api/customer/addresses/[id]/route.js
+import { NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
+import { getAuthUser } from '@/lib/auth'
+
+export async function DELETE(req, { params }) {
+  const { id } = await params
+  const { userId } = await getAuthUser()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const address = await prisma.address.findUnique({ where: { id } })
+  if (!address || address.userId !== userId) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  await prisma.address.delete({ where: { id } })
+  return NextResponse.json({ success: true })
+}
+```
+
+- [ ] **Step 5: Run tests to verify they pass**
+
+```
+npx vitest run __tests__/api/customer/addresses.test.js
+```
+
+Expected: 6 tests PASS
+
+- [ ] **Step 6: Commit**
+
+```
+git add app/api/customer/addresses/route.js app/api/customer/addresses/[id]/route.js __tests__/api/customer/addresses.test.js
+git commit -m "feat: add GET|POST /api/customer/addresses and DELETE /api/customer/addresses/[id]"
+```
+
+---
+
+## Task 7: Orders API
+
+**Files:**
+- Create: `app/api/customer/orders/route.js`
+- Create: `__tests__/api/customer/orders.test.js`
+
+- [ ] **Step 1: Write the failing test**
+
+```js
+// __tests__/api/customer/orders.test.js
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+vi.mock('@/lib/auth', () => ({ getAuthUser: vi.fn() }))
+vi.mock('@/lib/prisma', () => ({
+  default: {
+    order: { findMany: vi.fn(), create: vi.fn() },
+    product: { findMany: vi.fn() },
+    coupon: { findUnique: vi.fn() },
+    user: { update: vi.fn() },
+    $transaction: vi.fn(),
+  },
+}))
+
+import { GET, POST } from '@/app/api/customer/orders/route'
+import { NextRequest } from 'next/server'
+import { getAuthUser } from '@/lib/auth'
+import prisma from '@/lib/prisma'
+
+const USER = { userId: 'user_1' }
+const PRODUCT = { id: 'prod_1', name: 'Headphones', price: 80, inStock: true, storeId: 'store_1' }
+const ADDRESS = { id: 'addr_1', name: 'Home', street: '123 Main', city: 'Karachi', state: 'Sindh', zip: '75000', country: 'Pakistan', phone: '03001234567' }
+const ORDER = {
+  id: 'order_1', total: 80, status: 'ORDER_PLACED', userId: 'user_1', storeId: 'store_1',
+  addressId: 'addr_1', paymentMethod: 'COD', isCouponUsed: false, coupon: {},
+  createdAt: new Date(), updatedAt: new Date(),
+  orderItems: [{ orderId: 'order_1', productId: 'prod_1', quantity: 1, price: 80, product: { id: 'prod_1', name: 'Headphones', images: [], category: 'Headphones' } }],
+  address: ADDRESS,
+}
+
+const makeReq = (body) =>
+  new NextRequest('http://localhost/api/customer/orders', {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+beforeEach(() => vi.clearAllMocks())
+
+describe('GET /api/customer/orders', () => {
+  it('returns 401 when not authenticated', async () => {
+    getAuthUser.mockResolvedValue({ userId: null })
+    const res = await GET()
+    expect(res.status).toBe(401)
+  })
+
+  it('returns orders for authenticated user', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.order.findMany.mockResolvedValue([ORDER])
+    const res = await GET()
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.orders).toHaveLength(1)
+  })
+})
+
+describe('POST /api/customer/orders', () => {
+  it('returns 401 when not authenticated', async () => {
+    getAuthUser.mockResolvedValue({ userId: null })
+    const res = await POST(makeReq({ addressId: 'addr_1', items: [{ productId: 'prod_1', quantity: 1 }] }))
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 400 when addressId is missing', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    const res = await POST(makeReq({ items: [{ productId: 'prod_1', quantity: 1 }] }))
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when items is empty', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    const res = await POST(makeReq({ addressId: 'addr_1', items: [] }))
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when a product is out of stock', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.product.findMany.mockResolvedValue([{ ...PRODUCT, inStock: false }])
+    const res = await POST(makeReq({ addressId: 'addr_1', items: [{ productId: 'prod_1', quantity: 1 }] }))
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/out of stock/i)
+  })
+
+  it('creates order grouped by store and clears cart', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.product.findMany.mockResolvedValue([PRODUCT])
+    prisma.$transaction.mockImplementation(async (fn) => fn(prisma))
+    prisma.order.create.mockResolvedValue(ORDER)
+    prisma.user.update.mockResolvedValue({})
+    const res = await POST(makeReq({ addressId: 'addr_1', items: [{ productId: 'prod_1', quantity: 1 }] }))
+    expect(res.status).toBe(201)
+    expect(prisma.order.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ userId: 'user_1', storeId: 'store_1', addressId: 'addr_1', paymentMethod: 'COD' }),
+      })
+    )
+    expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: 'user_1' }, data: { cart: {} } })
+  })
+
+  it('returns 400 when coupon is expired at order time', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.product.findMany.mockResolvedValue([PRODUCT])
+    prisma.coupon.findUnique.mockResolvedValue({
+      code: 'SAVE10', discount: 10, description: '10% off',
+      expiresAt: new Date(Date.now() - 86400000),
+    })
+    const res = await POST(makeReq({ addressId: 'addr_1', couponCode: 'SAVE10', items: [{ productId: 'prod_1', quantity: 1 }] }))
+    expect(res.status).toBe(400)
+  })
+})
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+```
+npx vitest run __tests__/api/customer/orders.test.js
+```
+
+Expected: FAIL — missing module
+
+- [ ] **Step 3: Create the route**
+
+```js
+// app/api/customer/orders/route.js
+import { NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
+import { getAuthUser } from '@/lib/auth'
+
+export async function GET() {
+  const { userId } = await getAuthUser()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const orders = await prisma.order.findMany({
+    where: { userId },
+    include: {
+      orderItems: {
+        include: {
+          product: { select: { id: true, name: true, images: true, category: true } },
+        },
+      },
+      address: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  return NextResponse.json({ orders })
+}
+
+export async function POST(req) {
+  const { userId } = await getAuthUser()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { addressId, couponCode, items } = await req.json()
+
+  if (!addressId) return NextResponse.json({ error: 'Address is required' }, { status: 400 })
+  if (!items || items.length === 0) return NextResponse.json({ error: 'Cart is empty' }, { status: 400 })
+
+  const productIds = items.map(i => i.productId)
+  const products = await prisma.product.findMany({
+    where: { id: { in: productIds } },
+    select: { id: true, name: true, price: true, inStock: true, storeId: true },
+  })
+
+  const outOfStock = products.find(p => !p.inStock)
+  if (outOfStock) {
+    return NextResponse.json({ error: `${outOfStock.name} is out of stock` }, { status: 400 })
+  }
+
+  const productMap = Object.fromEntries(products.map(p => [p.id, p]))
+  const enrichedItems = items.map(i => ({
+    productId: i.productId,
+    quantity: i.quantity,
+    price: productMap[i.productId].price,
+    storeId: productMap[i.productId].storeId,
+  }))
+
+  let couponData = {}
+  let discountRate = 0
+  if (couponCode) {
+    const coupon = await prisma.coupon.findUnique({ where: { code: couponCode.toUpperCase() } })
+    if (!coupon || new Date(coupon.expiresAt) < new Date()) {
+      return NextResponse.json({ error: 'Coupon is invalid or expired' }, { status: 400 })
+    }
+    discountRate = coupon.discount / 100
+    couponData = { code: coupon.code, discount: coupon.discount, description: coupon.description }
+  }
+
+  const byStore = {}
+  for (const item of enrichedItems) {
+    if (!byStore[item.storeId]) byStore[item.storeId] = []
+    byStore[item.storeId].push(item)
+  }
+
+  const grandTotal = enrichedItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
+
+  const createdOrders = await prisma.$transaction(async (tx) => {
+    const results = []
+    for (const [storeId, storeItems] of Object.entries(byStore)) {
+      const storeSubtotal = storeItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
+      const storeDiscount = grandTotal > 0
+        ? (storeSubtotal / grandTotal) * discountRate * storeSubtotal
+        : 0
+      const storeTotal = parseFloat((storeSubtotal - storeDiscount).toFixed(2))
+
+      const order = await tx.order.create({
+        data: {
+          total: storeTotal,
+          userId,
+          storeId,
+          addressId,
+          paymentMethod: 'COD',
+          isCouponUsed: !!couponCode,
+          coupon: couponData,
+          orderItems: {
+            create: storeItems.map(i => ({
+              productId: i.productId,
+              quantity: i.quantity,
+              price: i.price,
+            })),
+          },
+        },
+        include: {
+          orderItems: {
+            include: {
+              product: { select: { id: true, name: true, images: true, category: true } },
+            },
+          },
+          address: true,
+        },
+      })
+      results.push(order)
+    }
+    await tx.user.update({ where: { id: userId }, data: { cart: {} } })
+    return results
+  })
+
+  return NextResponse.json({ orders: createdOrders }, { status: 201 })
+}
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+```
+npx vitest run __tests__/api/customer/orders.test.js
+```
+
+Expected: 7 tests PASS
+
+- [ ] **Step 5: Commit**
+
+```
+git add app/api/customer/orders/route.js __tests__/api/customer/orders.test.js
+git commit -m "feat: add GET|POST /api/customer/orders with multi-store grouping"
+```
+
+---
+
+## Task 8: Ratings API
+
+**Files:**
+- Create: `app/api/customer/ratings/route.js`
+- Create: `__tests__/api/customer/ratings.test.js`
+
+- [ ] **Step 1: Write the failing test**
+
+```js
+// __tests__/api/customer/ratings.test.js
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+vi.mock('@/lib/auth', () => ({ getAuthUser: vi.fn() }))
+vi.mock('@/lib/prisma', () => ({
+  default: {
+    order: { findUnique: vi.fn() },
+    rating: { findUnique: vi.fn(), create: vi.fn() },
+  },
+}))
+
+import { POST } from '@/app/api/customer/ratings/route'
+import { NextRequest } from 'next/server'
+import { getAuthUser } from '@/lib/auth'
+import prisma from '@/lib/prisma'
+
+const USER = { userId: 'user_1' }
+const ORDER = { id: 'order_1', userId: 'user_1', status: 'DELIVERED' }
+const RATING_ROW = {
+  id: 'rating_1', orderId: 'order_1', productId: 'prod_1',
+  userId: 'user_1', rating: 4, review: 'Great!', createdAt: new Date(),
+}
+
+beforeEach(() => vi.clearAllMocks())
+
+const makeReq = (body) =>
+  new NextRequest('http://localhost/api/customer/ratings', {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+describe('POST /api/customer/ratings', () => {
+  it('returns 401 when not authenticated', async () => {
+    getAuthUser.mockResolvedValue({ userId: null })
+    const res = await POST(makeReq({ orderId: 'order_1', productId: 'prod_1', rating: 4 }))
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 400 when required fields are missing', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    const res = await POST(makeReq({ orderId: 'order_1' }))
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when rating is out of range', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    const res = await POST(makeReq({ orderId: 'order_1', productId: 'prod_1', rating: 6 }))
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 404 when order does not belong to user', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.order.findUnique.mockResolvedValue({ ...ORDER, userId: 'other_user' })
+    const res = await POST(makeReq({ orderId: 'order_1', productId: 'prod_1', rating: 4, review: 'Good' }))
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 400 when order is not delivered', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.order.findUnique.mockResolvedValue({ ...ORDER, status: 'PROCESSING' })
+    const res = await POST(makeReq({ orderId: 'order_1', productId: 'prod_1', rating: 4, review: 'Good' }))
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/delivered/i)
+  })
+
+  it('returns 400 when already rated', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.order.findUnique.mockResolvedValue(ORDER)
+    prisma.rating.findUnique.mockResolvedValue(RATING_ROW)
+    const res = await POST(makeReq({ orderId: 'order_1', productId: 'prod_1', rating: 4, review: 'Good' }))
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/already rated/i)
+  })
+
+  it('creates rating and returns 201', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.order.findUnique.mockResolvedValue(ORDER)
+    prisma.rating.findUnique.mockResolvedValue(null)
+    prisma.rating.create.mockResolvedValue(RATING_ROW)
+    const res = await POST(makeReq({ orderId: 'order_1', productId: 'prod_1', rating: 4, review: 'Great product!' }))
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body.rating.id).toBe('rating_1')
+    expect(prisma.rating.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ userId: 'user_1', orderId: 'order_1', productId: 'prod_1', rating: 4 }),
+    })
+  })
+})
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+```
+npx vitest run __tests__/api/customer/ratings.test.js
+```
+
+Expected: FAIL — missing module
+
+- [ ] **Step 3: Create the route**
+
+```js
+// app/api/customer/ratings/route.js
+import { NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
+import { getAuthUser } from '@/lib/auth'
+
+export async function POST(req) {
+  const { userId } = await getAuthUser()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { orderId, productId, rating, review } = await req.json()
+
+  if (!orderId || !productId || !rating) {
+    return NextResponse.json({ error: 'orderId, productId, and rating are required' }, { status: 400 })
+  }
+
+  if (rating < 1 || rating > 5) {
+    return NextResponse.json({ error: 'Rating must be between 1 and 5' }, { status: 400 })
+  }
+
+  const order = await prisma.order.findUnique({ where: { id: orderId } })
+  if (!order || order.userId !== userId) {
+    return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+  }
+
+  if (order.status !== 'DELIVERED') {
+    return NextResponse.json({ error: 'Can only rate delivered orders' }, { status: 400 })
+  }
+
+  const existing = await prisma.rating.findUnique({
+    where: { userId_productId_orderId: { userId, productId, orderId } },
+  })
+  if (existing) {
+    return NextResponse.json({ error: 'Already rated this product for this order' }, { status: 400 })
+  }
+
+  const newRating = await prisma.rating.create({
+    data: { userId, productId, orderId, rating, review: review || '' },
+  })
+
+  return NextResponse.json({ rating: newRating }, { status: 201 })
+}
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+```
+npx vitest run __tests__/api/customer/ratings.test.js
+```
+
+Expected: 7 tests PASS
+
+- [ ] **Step 5: Run full test suite to confirm no regressions**
+
+```
+npx vitest run
+```
+
+Expected: 45 existing + ~33 new = ~78 tests PASS
+
+- [ ] **Step 6: Commit**
+
+```
+git add app/api/customer/ratings/route.js __tests__/api/customer/ratings.test.js
+git commit -m "feat: add POST /api/customer/ratings with delivered-order and duplicate guards"
+```
+
+---
+
+<!-- PLAN CONTINUES — Tasks 9–18 to be written in subsequent parts -->
