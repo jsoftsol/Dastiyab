@@ -49,6 +49,17 @@ export async function POST(req) {
     }
 
     const productMap = Object.fromEntries(products.map(p => [p.id, p]))
+
+    const missing = items.find(i => !productMap[i.productId])
+    if (missing) {
+      return NextResponse.json({ error: 'One or more products not found' }, { status: 400 })
+    }
+
+    const address = await prisma.address.findFirst({ where: { id: addressId, userId } })
+    if (!address) {
+      return NextResponse.json({ error: 'Address not found' }, { status: 404 })
+    }
+
     const enrichedItems = items.map(i => ({
       productId: i.productId,
       quantity: i.quantity,

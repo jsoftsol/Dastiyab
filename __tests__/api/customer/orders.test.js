@@ -7,6 +7,7 @@ vi.mock('@/lib/prisma', () => ({
     product: { findMany: vi.fn() },
     coupon: { findUnique: vi.fn() },
     user: { update: vi.fn() },
+    address: { findFirst: vi.fn() },
     $transaction: vi.fn(),
   },
 }))
@@ -93,6 +94,7 @@ describe('POST /api/customer/orders', () => {
   it('creates order grouped by store and clears cart', async () => {
     getAuthUser.mockResolvedValue(USER)
     prisma.product.findMany.mockResolvedValue([PRODUCT])
+    prisma.address.findFirst.mockResolvedValue({ id: 'addr_1' })
     prisma.$transaction.mockImplementation(async (fn) => fn(prisma))
     prisma.order.create.mockResolvedValue(ORDER)
     prisma.user.update.mockResolvedValue({})
@@ -106,9 +108,29 @@ describe('POST /api/customer/orders', () => {
     expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: 'user_1' }, data: { cart: {} } })
   })
 
+  it('returns 400 when a product is not found', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.product.findMany.mockResolvedValue([]) // empty — product not found
+    const res = await POST(makeReq({ addressId: 'addr_1', items: [{ productId: 'nonexistent', quantity: 1 }] }))
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/not found/i)
+  })
+
+  it('returns 404 when address does not belong to user', async () => {
+    getAuthUser.mockResolvedValue(USER)
+    prisma.product.findMany.mockResolvedValue([PRODUCT])
+    prisma.address.findFirst.mockResolvedValue(null)
+    const res = await POST(makeReq({ addressId: 'addr_other', items: [{ productId: 'prod_1', quantity: 1 }] }))
+    expect(res.status).toBe(404)
+    const body = await res.json()
+    expect(body.error).toMatch(/address/i)
+  })
+
   it('returns 400 when coupon is expired at order time', async () => {
     getAuthUser.mockResolvedValue(USER)
     prisma.product.findMany.mockResolvedValue([PRODUCT])
+    prisma.address.findFirst.mockResolvedValue({ id: 'addr_1' })
     prisma.coupon.findUnique.mockResolvedValue({
       code: 'SAVE10', discount: 10, description: '10% off',
       expiresAt: new Date(Date.now() - 86400000),
