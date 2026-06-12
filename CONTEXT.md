@@ -53,13 +53,36 @@ Phase 4 (Public Storefront) is complete. All pages are wired to real PostgreSQL 
 - Create Store — `POST /api/public/stores` (creates store, sets vendor role, signOut), `GET /api/customer/store`
 - CartSync hydrates Redux cart from DB on login
 
-**Immediate next step:** All 5 phases complete. Platform is feature-complete for v1. Consider: manual end-to-end testing, VPS deployment, or starting v2 features (Stripe, analytics, email notifications).
+**Immediate next step:** All 5 phases complete. Platform is feature-complete for v1. Deployment infrastructure is live (Docker, GitHub Actions). Consider: VPS pre-deployment checklist, or starting v2 features (Stripe, analytics, email notifications).
 
 **Before manual testing of auth:** Add Google OAuth credentials to `.env.local`:
 - `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (from Google Cloud Console)
 - To promote a user to admin: `UPDATE "User" SET role = 'admin' WHERE email = 'you@example.com';` then sign out/in
 
 **Node 24 switch (manual):** Run `nvm use 24` in your terminal — `.nvmrc` is set but nvm-windows doesn't auto-switch.
+
+---
+
+## Deployment Infrastructure (2026-06-12)
+
+**Status:** Complete
+
+Files added:
+- `Dockerfile` — multi-stage build (deps → builder → runner), Node 24 alpine, Next.js standalone output
+- `docker-compose.prod.yml` — three services: postgres, app (runner stage), migrate (builder stage)
+- `.github/workflows/deploy.yml` — push to `deploy` branch triggers rsync + SSH docker compose up + migrate
+- `prisma/migrations/` — initial migration generated via `prisma migrate diff`
+- `.dockerignore` — excludes build/secret files from Docker context
+- `.env.example` — documents all required production env vars
+
+**GitHub secrets required:** SERVER_HOST, SERVER_USER, SERVER_SSH_KEY, SERVER_APP_DIR, PRODUCTION_ENV
+
+**VPS pre-deploy checklist:**
+1. Docker + Docker Compose v2 installed
+2. SSH key in ~/.ssh/authorized_keys
+3. `$SERVER_APP_DIR/release/` directory exists
+4. All 5 secrets configured in GitHub repository settings
+5. Push a commit to `deploy` branch to trigger first deployment
 
 ---
 
