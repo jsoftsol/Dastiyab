@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    images:{
-        unoptimized: true
-    }
-};
+  output: 'standalone',
+  images: {
+    unoptimized: true
+  }
+}
 
-export default nextConfig;
+export default nextConfig
