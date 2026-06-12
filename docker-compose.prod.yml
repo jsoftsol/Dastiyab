@@ -1,0 +1,42 @@
+name: dastiyab
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: dastiyab_postgres
+    env_file: .env.production
+    volumes:
+      - dastiyab_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      target: runner
+    container_name: dastiyab_app
+    env_file: .env.production
+    ports:
+      - "127.0.0.1:${APP_PORT:-7000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      target: builder
+    container_name: dastiyab_migrate
+    command: ["npx", "prisma", "migrate", "deploy"]
+    env_file: .env.production
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  dastiyab_postgres_data:
