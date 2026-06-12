@@ -1,6 +1,16 @@
-import { categories } from "@/assets/assets";
+'use client'
+import { useEffect, useState } from 'react'
 
 const CategoriesMarquee = () => {
+
+    const [categories, setCategories] = useState([])
+
+    useEffect(() => {
+        fetch('/api/public/categories')
+            .then(r => r.json())
+            .then(data => setCategories(data.categories ?? []))
+            .catch(() => {})
+    }, [])
 
     return (
         <div className="overflow-hidden w-full relative max-w-7xl mx-auto select-none group sm:my-20">
