@@ -5,7 +5,7 @@ import React, { useState } from 'react'
 import { XIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const RatingModal = ({ ratingModal, setRatingModal }) => {
+const RatingModal = ({ ratingModal, setRatingModal, onRatingSubmitted }) => {
 
     const [rating, setRating] = useState(0);
     const [review, setReview] = useState('');
@@ -18,7 +18,24 @@ const RatingModal = ({ ratingModal, setRatingModal }) => {
             return toast('write a short review');
         }
 
-        setRatingModal(null);
+        const res = await fetch('/api/customer/ratings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                orderId: ratingModal.orderId,
+                productId: ratingModal.productId,
+                rating,
+                review,
+            }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+            toast.error(data.error ?? 'Failed to submit rating')
+            return
+        }
+        toast.success('Rating submitted!')
+        setRatingModal(null)
+        onRatingSubmitted?.()
     }
 
     return (

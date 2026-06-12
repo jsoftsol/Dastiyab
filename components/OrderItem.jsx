@@ -1,17 +1,14 @@
 'use client'
 import Image from "next/image";
 import { DotIcon } from "lucide-react";
-import { useSelector } from "react-redux";
 import Rating from "./Rating";
 import { useState } from "react";
 import RatingModal from "./RatingModal";
 
-const OrderItem = ({ order }) => {
+const OrderItem = ({ order, ratings, onRatingSubmitted }) => {
 
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$';
     const [ratingModal, setRatingModal] = useState(null);
-
-    const { ratings } = useSelector(state => state.rating);
 
     return (
         <>
@@ -38,7 +35,7 @@ const OrderItem = ({ order }) => {
                                             ? <Rating value={ratings.find(rating => order.id === rating.orderId && item.product.id === rating.productId).rating} />
                                             : <button onClick={() => setRatingModal({ orderId: order.id, productId: item.product.id })} className={`text-green-500 hover:bg-green-50 transition ${order.status !== "DELIVERED" && 'hidden'}`}>Rate Product</button>
                                         }</div>
-                                    {ratingModal && <RatingModal ratingModal={ratingModal} setRatingModal={setRatingModal} />}
+                                    {ratingModal && <RatingModal ratingModal={ratingModal} setRatingModal={setRatingModal} onRatingSubmitted={onRatingSubmitted} />}
                                 </div>
                             </div>
                         ))}

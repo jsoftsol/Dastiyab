@@ -1,46 +1,51 @@
 'use client'
-import PageTitle from "@/components/PageTitle"
-import { useEffect, useState } from "react";
-import OrderItem from "@/components/OrderItem";
-import { orderDummyData } from "@/assets/assets";
+import { useEffect, useState, useCallback } from 'react'
+import OrderItem from '@/components/OrderItem'
 
-export default function Orders() {
+export default function OrdersPage() {
+  const [orders, setOrders] = useState([])
+  const [ratings, setRatings] = useState([])
+  const [loading, setLoading] = useState(true)
 
-    const [orders, setOrders] = useState([]);
+  const fetchOrders = useCallback(async () => {
+    const res = await fetch('/api/customer/orders')
+    if (res.ok) {
+      const data = await res.json()
+      setOrders(data.orders ?? [])
+      setRatings(data.ratings ?? [])
+    }
+    setLoading(false)
+  }, [])
 
-    useEffect(() => {
-        setOrders(orderDummyData)
-    }, []);
+  useEffect(() => {
+    fetchOrders()
+  }, [fetchOrders])
 
+  if (loading) {
+    return <div className="min-h-[60vh] flex items-center justify-center"><p className="text-slate-400">Loading orders...</p></div>
+  }
+
+  if (orders.length === 0) {
     return (
-        <div className="min-h-[70vh] mx-6">
-            {orders.length > 0 ? (
-                (
-                    <div className="my-20 max-w-7xl mx-auto">
-                        <PageTitle heading="My Orders" text={`Showing total ${orders.length} orders`} linkText={'Go to home'} />
-
-                        <table className="w-full max-w-5xl text-slate-500 table-auto border-separate border-spacing-y-12 border-spacing-x-4">
-                            <thead>
-                                <tr className="max-sm:text-sm text-slate-600 max-md:hidden">
-                                    <th className="text-left">Product</th>
-                                    <th className="text-center">Total Price</th>
-                                    <th className="text-left">Address</th>
-                                    <th className="text-left">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {orders.map((order) => (
-                                    <OrderItem order={order} key={order.id} />
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )
-            ) : (
-                <div className="min-h-[80vh] mx-6 flex items-center justify-center text-slate-400">
-                    <h1 className="text-2xl sm:text-4xl font-semibold">You have no orders</h1>
-                </div>
-            )}
-        </div>
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <p className="text-slate-400 text-xl">No orders yet.</p>
+      </div>
     )
+  }
+
+  return (
+    <div className="px-6 py-10 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-medium mb-8">My Orders</h1>
+      <div className="space-y-6">
+        {orders.map(order => (
+          <OrderItem
+            key={order.id}
+            order={order}
+            ratings={ratings}
+            onRatingSubmitted={fetchOrders}
+          />
+        ))}
+      </div>
+    </div>
+  )
 }
