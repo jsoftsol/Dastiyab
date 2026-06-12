@@ -8,6 +8,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 RUN mkdir -p public
 COPY . .
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 RUN npx prisma generate
 RUN npm run build
 
