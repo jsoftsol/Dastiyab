@@ -39,7 +39,7 @@ Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors man
 | 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | ✅ Complete | `docs/superpowers/specs/2026-06-12-phase-5-platform-services-design.md` |
 
 **Current phase:** Deployment — Docker + GitHub Actions CI/CD ✅ Complete  
-**Last session ended:** 2026-06-12 — Deployment infrastructure complete. Dockerfile (multi-stage, Node 24), docker-compose.prod.yml, GitHub Actions deploy workflow. Three build fixes required during first deploy attempt: (1) dummy DATABASE_URL for prisma generate in builder stage, (2) export const dynamic = 'force-dynamic' on all 11 admin/store pages (Next.js was trying to pre-render them at build time), (3) chmod 600 + set -e + correct postgres → migrate → app ordering in deploy script.
+**Last session ended:** 2026-06-12 — Deployment infrastructure complete. Dockerfile (multi-stage, Node 24), docker-compose.prod.yml, GitHub Actions deploy workflow. Three build fixes applied. Also renamed `middleware.js` → `proxy.js` (Next.js 16 deprecated the middleware convention). Latest deploy branch: 502100b.
 
 ---
 
@@ -102,7 +102,7 @@ Files added:
 | `docs/superpowers/plans/2026-06-11-phase-1-foundation.md` | Phase 1 step-by-step plan |
 | `docs/superpowers/plans/2026-06-11-nextauth-migration.md` | Auth migration 13-task plan |
 | `auth.js` | NextAuth config — Google + Credentials providers, JWT callbacks |
-| `middleware.js` | Route protection — admin/vendor/customer role enforcement |
+| `proxy.js` | Route protection — admin/vendor/customer role enforcement (renamed from middleware.js in Next.js 16) |
 | `lib/auth.js` | Server-side auth helpers — requireAdmin, requireVendor, getAuthUser |
 | `app/AuthProvider.jsx` | SessionProvider client wrapper for root layout |
 | `components/admin/ui/UserMenu.jsx` | Replaces Clerk UserButton in admin + vendor navbars |
