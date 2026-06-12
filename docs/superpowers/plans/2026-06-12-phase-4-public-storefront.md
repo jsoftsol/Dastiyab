@@ -2306,3 +2306,599 @@ git commit -m "feat: wire cart page to real product data via Promise.all, add sy
 ```
 
 ---
+
+## Part 5: Checkout, Orders, Create Store
+
+---
+
+### Task 16: Wire OrderSummary + AddressModal
+
+**Files:**
+- Modify: `components/OrderSummary.jsx`
+- Modify: `components/AddressModal.jsx`
+
+- [ ] **Step 1: Rewrite `components/OrderSummary.jsx`**
+
+This component lives in the cart sidebar. It fetches addresses, validates coupons, and places orders.
+
+```jsx
+'use client'
+import { useState, useEffect } from 'react'
+import { useSelector, useDispatch } from 'react-redux'
+import { clearCart } from '@/lib/features/cart/cartSlice'
+import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
+import AddressModal from '@/components/AddressModal'
+
+export default function OrderSummary({ products }) {
+  const { cartItems } = useSelector(state => state.cart)
+  const dispatch = useDispatch()
+  const router = useRouter()
+
+  const [addresses, setAddresses] = useState([])
+  const [selectedAddressId, setSelectedAddressId] = useState('')
+  const [couponCode, setCouponCode] = useState('')
+  const [discount, setDiscount] = useState(0)
+  const [couponError, setCouponError] = useState('')
+  const [showAddressModal, setShowAddressModal] = useState(false)
+  const [placing, setPlacing] = useState(false)
+
+  const subtotal = products.reduce((sum, p) => sum + p.price * (cartItems[p.id] ?? 0), 0)
+  const total = Math.max(0, subtotal - discount)
+
+  const fetchAddresses = async () => {
+    const res = await fetch('/api/customer/addresses')
+    if (res.ok) {
+      const data = await res.json()
+      setAddresses(data.addresses ?? [])
+    }
+  }
+
+  useEffect(() => {
+    fetchAddresses()
+  }, [])
+
+  const applyCoupon = async () => {
+    setCouponError('')
+    const res = await fetch('/api/public/coupons/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: couponCode }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      setCouponError(data.error ?? 'Invalid coupon')
+      setDiscount(0)
+    } else {
+      setDiscount(data.discount)
+      setCouponError('')
+    }
+  }
+
+  const placeOrder = async () => {
+    if (!selectedAddressId) { toast.error('Please select a delivery address'); return }
+
+    const items = Object.entries(cartItems).map(([productId, quantity]) => ({ productId, quantity }))
+    if (items.length === 0) { toast.error('Cart is empty'); return }
+
+    setPlacing(true)
+    try {
+      const res = await fetch('/api/customer/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          addressId: selectedAddressId,
+          couponCode: discount > 0 ? couponCode : undefined,
+          items,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error ?? 'Failed to place order'); return }
+
+      dispatch(clearCart())
+      toast.success('Order placed!')
+      router.push('/orders')
+    } finally {
+      setPlacing(false)
+    }
+  }
+
+  return (
+    <div className="w-full lg:w-80 border rounded-lg p-6 h-fit sticky top-4">
+      <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
+
+      {/* Address selector */}
+      <div className="mb-4">
+        <label className="text-sm text-slate-500 block mb-1">Delivery Address</label>
+        <select
+          value={selectedAddressId}
+          onChange={e => setSelectedAddressId(e.target.value)}
+          className="w-full border rounded p-2 text-sm"
+        >
+          <option value="">Select address</option>
+          {addresses.map(a => (
+            <option key={a.id} value={a.id}>{a.street}, {a.city}</option>
+          ))}
+        </select>
+        <button
+          onClick={() => setShowAddressModal(true)}
+          className="text-xs text-slate-500 underline mt-1"
+        >
+          + Add new address
+        </button>
+      </div>
+
+      {/* Coupon */}
+      <div className="mb-4">
+        <label className="text-sm text-slate-500 block mb-1">Coupon Code</label>
+        <div className="flex gap-2">
+          <input
+            value={couponCode}
+            onChange={e => setCouponCode(e.target.value)}
+            placeholder="Enter code"
+            className="flex-1 border rounded p-2 text-sm"
+          />
+          <button onClick={applyCoupon} className="px-3 py-2 bg-slate-800 text-white text-sm rounded">Apply</button>
+        </div>
+        {couponError && <p className="text-red-500 text-xs mt-1">{couponError}</p>}
+        {discount > 0 && <p className="text-green-600 text-xs mt-1">Discount: Rs {discount.toLocaleString()}</p>}
+      </div>
+
+      {/* Totals */}
+      <div className="border-t pt-4 space-y-2 text-sm">
+        <div className="flex justify-between"><span>Subtotal</span><span>Rs {subtotal.toLocaleString()}</span></div>
+        {discount > 0 && <div className="flex justify-between text-green-600"><span>Discount</span><span>-Rs {discount.toLocaleString()}</span></div>}
+        <div className="flex justify-between font-semibold text-base"><span>Total</span><span>Rs {total.toLocaleString()}</span></div>
+      </div>
+
+      <button
+        onClick={placeOrder}
+        disabled={placing}
+        className="w-full mt-6 py-3 bg-slate-800 text-white rounded font-medium hover:bg-slate-900 disabled:opacity-50"
+      >
+        {placing ? 'Placing order...' : 'Place Order (COD)'}
+      </button>
+
+      {showAddressModal && (
+        <AddressModal
+          onClose={() => setShowAddressModal(false)}
+          onAddressAdded={() => { fetchAddresses(); setShowAddressModal(false) }}
+        />
+      )}
+    </div>
+  )
+}
+```
+
+- [ ] **Step 2: Rewrite `components/AddressModal.jsx`**
+
+```jsx
+'use client'
+import { useState } from 'react'
+import toast from 'react-hot-toast'
+
+export default function AddressModal({ onClose, onAddressAdded }) {
+  const [form, setForm] = useState({ street: '', city: '', state: '', zip: '', country: '' })
+  const [saving, setSaving] = useState(false)
+
+  const onChange = e => setForm({ ...form, [e.target.name]: e.target.value })
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      const res = await fetch('/api/customer/addresses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error ?? 'Failed to save address'); return }
+      toast.success('Address saved')
+      onAddressAdded()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <h2 className="text-lg font-semibold mb-4">Add Address</h2>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {['street', 'city', 'state', 'zip', 'country'].map(field => (
+            <input
+              key={field}
+              name={field}
+              value={form[field]}
+              onChange={onChange}
+              placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+              required
+              className="w-full border rounded p-2 text-sm"
+            />
+          ))}
+          <div className="flex gap-3 justify-end pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-slate-500">Cancel</button>
+            <button type="submit" disabled={saving} className="px-4 py-2 bg-slate-800 text-white text-sm rounded disabled:opacity-50">
+              {saving ? 'Saving...' : 'Save Address'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 3: Verify checkout flow in browser**
+
+1. Add items to cart, go to `/cart`
+2. "Add new address" → fill modal → address appears in dropdown
+3. Select address, optionally enter a coupon code → total updates
+4. Click "Place Order (COD)" → redirected to `/orders`
+
+- [ ] **Step 4: Commit**
+
+```
+git add components/OrderSummary.jsx components/AddressModal.jsx
+git commit -m "feat: wire OrderSummary (addresses, coupon, place order) and AddressModal to real APIs"
+```
+
+---
+
+### Task 17: Wire Orders page + OrderItem + RatingModal
+
+**Files:**
+- Modify: `app/(public)/orders/page.jsx`
+- Modify: `components/OrderItem.jsx`
+- Modify: `components/RatingModal.jsx`
+
+- [ ] **Step 1: Rewrite `app/(public)/orders/page.jsx`**
+
+```jsx
+'use client'
+import { useEffect, useState, useCallback } from 'react'
+import OrderItem from '@/components/OrderItem'
+
+export default function OrdersPage() {
+  const [orders, setOrders] = useState([])
+  const [ratings, setRatings] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchOrders = useCallback(async () => {
+    const res = await fetch('/api/customer/orders')
+    if (res.ok) {
+      const data = await res.json()
+      setOrders(data.orders ?? [])
+      setRatings(data.ratings ?? [])
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    fetchOrders()
+  }, [fetchOrders])
+
+  if (loading) {
+    return <div className="min-h-[60vh] flex items-center justify-center"><p className="text-slate-400">Loading orders...</p></div>
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <p className="text-slate-400 text-xl">No orders yet.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="px-6 py-10 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-medium mb-8">My Orders</h1>
+      <div className="space-y-6">
+        {orders.map(order => (
+          <OrderItem
+            key={order.id}
+            order={order}
+            ratings={ratings}
+            onRatingSubmitted={fetchOrders}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 2: Modify `components/OrderItem.jsx` to accept props instead of Redux**
+
+Change the `ratings` source from `useSelector(state => state.rating.ratings)` to the `ratings` prop. Add `onRatingSubmitted` prop passing to `RatingModal`.
+
+Key changes to make:
+1. Remove `useSelector` for ratings
+2. Accept `ratings` and `onRatingSubmitted` as props
+3. Pass `onRatingSubmitted` to `RatingModal`
+
+The rating button logic stays the same — `ratings.find(r => r.orderId === order.id && r.productId === item.product.id)`.
+
+```jsx
+// Before (top of component):
+const { ratings } = useSelector(state => state.rating)
+
+// After:
+// (remove useSelector for ratings — it comes from props now)
+
+// Component signature:
+export default function OrderItem({ order, ratings, onRatingSubmitted }) {
+```
+
+And in the RatingModal render, add the callback:
+```jsx
+<RatingModal
+  ratingModal={ratingModal}
+  setRatingModal={setRatingModal}
+  onRatingSubmitted={onRatingSubmitted}
+/>
+```
+
+- [ ] **Step 3: Modify `components/RatingModal.jsx` to POST to API**
+
+Add `onRatingSubmitted` prop and replace the empty `handleSubmit` with a real API call:
+
+```jsx
+// Accept onRatingSubmitted prop
+export default function RatingModal({ ratingModal, setRatingModal, onRatingSubmitted }) {
+  // ...existing state (rating, review)...
+
+  const handleSubmit = async () => {
+    const res = await fetch('/api/customer/ratings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderId: ratingModal.orderId,
+        productId: ratingModal.productId,
+        rating,
+        review,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      toast.error(data.error ?? 'Failed to submit rating')
+      return
+    }
+    toast.success('Rating submitted!')
+    setRatingModal(null)
+    onRatingSubmitted?.()
+  }
+
+  // ...rest of component (render stars, review textarea, submit button)...
+}
+```
+
+- [ ] **Step 4: Verify in browser**
+
+Open `/orders`. Orders should appear. On a DELIVERED order, click Rate — modal should open, submit rating, button should become disabled for that product.
+
+- [ ] **Step 5: Commit**
+
+```
+git add "app/(public)/orders/page.jsx" components/OrderItem.jsx components/RatingModal.jsx
+git commit -m "feat: wire orders page + OrderItem + RatingModal to real APIs"
+```
+
+---
+
+### Task 18: Wire Create Store page
+
+**Files:**
+- Modify: `app/(public)/create-store/page.jsx`
+
+- [ ] **Step 1: Rewrite `app/(public)/create-store/page.jsx`**
+
+Wire `fetchSellerStatus` and `onSubmitHandler`. On success call `signOut` so the new vendor role is picked up on re-login.
+
+```jsx
+'use client'
+import { assets } from '@/assets/assets'
+import { useEffect, useState } from 'react'
+import { signOut, useSession } from 'next-auth/react'
+import Image from 'next/image'
+import toast from 'react-hot-toast'
+import Loading from '@/components/Loading'
+
+export default function CreateStore() {
+  const { data: session } = useSession()
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false)
+  const [status, setStatus] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [message, setMessage] = useState('')
+
+  const [storeInfo, setStoreInfo] = useState({
+    name: '',
+    username: '',
+    description: '',
+    email: '',
+    contact: '',
+    address: '',
+    image: '',
+  })
+
+  const onChangeHandler = (e) => {
+    setStoreInfo({ ...storeInfo, [e.target.name]: e.target.value })
+  }
+
+  const fetchSellerStatus = async () => {
+    const res = await fetch('/api/customer/store')
+    if (res.ok) {
+      const data = await res.json()
+      if (data.store) {
+        setAlreadySubmitted(true)
+        setStatus(data.store.isApproved ? 'approved' : 'pending')
+        setMessage(
+          data.store.isApproved
+            ? 'Your store is approved and active!'
+            : 'Your store is under review. We\'ll notify you once approved.'
+        )
+        if (data.store.isApproved) {
+          setTimeout(() => { window.location.href = '/store' }, 5000)
+        }
+      }
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    if (session) fetchSellerStatus()
+    else setLoading(false)
+  }, [session])
+
+  const onSubmitHandler = async (e) => {
+    e.preventDefault()
+
+    let imageUrl = ''
+    if (storeInfo.image) {
+      const formData = new FormData()
+      formData.append('image', storeInfo.image)
+      const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData })
+      if (!uploadRes.ok) { toast.error('Image upload failed'); return }
+      const uploadData = await uploadRes.json()
+      imageUrl = uploadData.url
+    }
+
+    const res = await fetch('/api/public/stores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: storeInfo.name,
+        username: storeInfo.username,
+        description: storeInfo.description,
+        email: storeInfo.email,
+        contact: storeInfo.contact,
+        address: storeInfo.address,
+        logo: imageUrl,
+      }),
+    })
+
+    const data = await res.json()
+    if (!res.ok) { toast.error(data.error ?? 'Submission failed'); return }
+
+    toast.success('Store submitted! Sign in again to continue.')
+    await signOut({ callbackUrl: '/sign-in' })
+  }
+
+  return !loading ? (
+    <>
+      {!alreadySubmitted ? (
+        <div className="mx-6 min-h-[70vh] my-16">
+          <form
+            onSubmit={e => toast.promise(onSubmitHandler(e), { loading: 'Submitting data...' })}
+            className="max-w-7xl mx-auto flex flex-col items-start gap-3 text-slate-500"
+          >
+            <div>
+              <h1 className="text-3xl">Add Your <span className="text-slate-800 font-medium">Store</span></h1>
+              <p className="max-w-lg">To become a seller on Dastiyab, submit your store details for review. Your store will be activated after admin verification.</p>
+            </div>
+
+            <label className="mt-10 cursor-pointer">
+              Store Logo
+              <Image
+                src={storeInfo.image ? URL.createObjectURL(storeInfo.image) : assets.upload_area}
+                className="rounded-lg mt-2 h-16 w-auto"
+                alt=""
+                width={150}
+                height={100}
+              />
+              <input type="file" accept="image/*" onChange={(e) => setStoreInfo({ ...storeInfo, image: e.target.files[0] })} hidden />
+            </label>
+
+            <p>Username</p>
+            <input name="username" onChange={onChangeHandler} value={storeInfo.username} type="text" placeholder="Enter your store username" className="border border-slate-300 outline-slate-400 w-full max-w-lg p-2 rounded" />
+
+            <p>Name</p>
+            <input name="name" onChange={onChangeHandler} value={storeInfo.name} type="text" placeholder="Enter your store name" className="border border-slate-300 outline-slate-400 w-full max-w-lg p-2 rounded" />
+
+            <p>Description</p>
+            <textarea name="description" onChange={onChangeHandler} value={storeInfo.description} rows={5} placeholder="Enter your store description" className="border border-slate-300 outline-slate-400 w-full max-w-lg p-2 rounded resize-none" />
+
+            <p>Email</p>
+            <input name="email" onChange={onChangeHandler} value={storeInfo.email} type="email" placeholder="Enter your store email" className="border border-slate-300 outline-slate-400 w-full max-w-lg p-2 rounded" />
+
+            <p>Contact Number</p>
+            <input name="contact" onChange={onChangeHandler} value={storeInfo.contact} type="text" placeholder="Enter your store contact number" className="border border-slate-300 outline-slate-400 w-full max-w-lg p-2 rounded" />
+
+            <p>Address</p>
+            <textarea name="address" onChange={onChangeHandler} value={storeInfo.address} rows={5} placeholder="Enter your store address" className="border border-slate-300 outline-slate-400 w-full max-w-lg p-2 rounded resize-none" />
+
+            <button className="bg-slate-800 text-white px-12 py-2 rounded mt-10 mb-40 active:scale-95 hover:bg-slate-900 transition">Submit</button>
+          </form>
+        </div>
+      ) : (
+        <div className="min-h-[80vh] flex flex-col items-center justify-center">
+          <p className="sm:text-2xl lg:text-3xl mx-5 font-semibold text-slate-500 text-center max-w-2xl">{message}</p>
+          {status === 'approved' && <p className="mt-5 text-slate-400">redirecting to dashboard in <span className="font-semibold">5 seconds</span></p>}
+        </div>
+      )}
+    </>
+  ) : (<Loading />)
+}
+```
+
+> This requires `GET /api/customer/store` to exist. Add that route now:
+
+- [ ] **Step 2: Create `app/api/customer/store/route.js`**
+
+This endpoint returns the current user's store (if any), so the create-store page can show its approval status.
+
+```js
+import { NextResponse } from 'next/server'
+import { getAuthUser } from '@/lib/auth'
+import prisma from '@/lib/prisma'
+
+export async function GET() {
+  const { userId } = await getAuthUser()
+  if (!userId) return NextResponse.json({ store: null })
+
+  const store = await prisma.store.findFirst({
+    where: { userId },
+    select: { id: true, name: true, isApproved: true, isActive: true },
+  })
+
+  return NextResponse.json({ store: store ?? null })
+}
+```
+
+- [ ] **Step 3: Verify in browser**
+
+1. Sign in as a user with no store — form should show
+2. Submit the form with a logo — logo should upload to Cloudinary, store created in DB, user signed out
+3. Sign back in → role is now `vendor` → `/store` dashboard works
+4. Visit `/create-store` again — status message should show with approval state
+
+- [ ] **Step 4: Commit**
+
+```
+git add "app/(public)/create-store/page.jsx" app/api/customer/store/route.js
+git commit -m "feat: wire create-store page to upload API, store API, and signOut on success"
+```
+
+---
+
+## Phase 4 Complete — Final Steps
+
+- [ ] **Run full test suite**
+
+```
+npx vitest run
+```
+
+Expected: ~75 tests PASS (45 existing + ~33 new from Phase 4 API routes)
+
+- [ ] **Update CONTEXT.md**
+
+Mark Phase 4 as ✅ Complete. Update "Current phase" and "Last session ended" lines. Check off all Phase 4 tasks in the checklist section.
+
+- [ ] **Final commit**
+
+```
+git add CONTEXT.md
+git commit -m "chore: mark Phase 4 complete in CONTEXT.md"
+```
