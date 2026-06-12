@@ -38,8 +38,8 @@ Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors man
 | 4 | Public Storefront — wire existing pages to real API routes | 🔄 In progress | `docs/superpowers/specs/2026-06-12-phase-4-public-storefront-design.md` |
 | 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | 🔲 Not started | _(create when Phase 4 done)_ |
 
-**Current phase:** Phase 4 — Public Storefront (design approved, writing implementation plan)  
-**Last session ended:** 2026-06-12 — Phase 4 design spec written and committed. API-routes + client components approach chosen for mobile-app compatibility. DB-persisted cart (`User.cart` JSON), infinite scroll + Load More fallback, full checkout flow (addresses, coupon validation, order placement, ratings). 14 new API routes across `/api/public/*` and `/api/customer/*`. Target ~75 tests. Implementation plan writing in progress — invoke writing-plans skill to continue.
+**Current phase:** Phase 4 — Public Storefront (implementation plan complete, ready to execute)  
+**Last session ended:** 2026-06-12 — Phase 4 implementation plan fully written (Tasks 1-18). All 10 API routes (Tasks 1-8) and all 10 page/component wiring tasks (Tasks 9-18) documented with full code. Plan at `docs/superpowers/plans/2026-06-12-phase-4-public-storefront.md`. Ready to execute — use subagent-driven-development or executing-plans skill.
 
 ---
 
@@ -47,7 +47,7 @@ Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors man
 
 Project renamed to **Dastiyab** and pushed to https://github.com/jsoftsol/Dastiyab.git. Phase 3 (Vendor Dashboard) is complete — all 5 vendor pages wired to real PostgreSQL data, Cloudinary upload live, 45/45 tests passing.
 
-**Immediate next step:** Phase 4 implementation plan — invoke `writing-plans` skill to create the step-by-step plan from `docs/superpowers/specs/2026-06-12-phase-4-public-storefront-design.md`.
+**Immediate next step:** Execute Phase 4 implementation plan at `docs/superpowers/plans/2026-06-12-phase-4-public-storefront.md`. Use subagent-driven-development or executing-plans skill. Tasks 1-8 are all new API routes (backend); Tasks 9-18 wire existing pages/components to those APIs.
 
 **Before manual testing of auth:** Add Google OAuth credentials to `.env.local`:
 - `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (from Google Cloud Console)
