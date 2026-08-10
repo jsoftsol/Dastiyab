@@ -38,14 +38,14 @@ Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors man
 | 4 | Public Storefront — wire existing pages to real API routes | ✅ Complete | `docs/superpowers/specs/2026-06-12-phase-4-public-storefront-design.md` |
 | 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | ✅ Complete | `docs/superpowers/specs/2026-06-12-phase-5-platform-services-design.md` |
 
-**Current phase:** Deployment infra — Docker + GitHub Actions CI/CD ✅ Complete (code); **production deploy status unverified** — no commits or confirmation since 2026-06-12  
-**Last session ended:** 2026-08-11 — Documentation overhaul session (this session). No app code changed. Rewrote `CLAUDE.md`, `CONTEXT.md`, `docs/PRD.md` for accuracy and added an explicit save-progress protocol. See "2026-08-11 Session" below for details.
+**Current phase:** Deployment — Docker + GitHub Actions CI/CD ✅ Complete and **confirmed live**  
+**Last session ended:** 2026-08-11 — Documentation overhaul + repo housekeeping + deploy verification (this session, see "2026-08-11 Session" below).
 
 ---
 
 ## Where We Left Off
 
-All 6 phases (0–5) plus deployment infrastructure are code-complete as of 2026-06-12 (commit `8b2709a`). There is a ~2 month gap with no commits between then and this session (2026-08-11) — nothing indicates the deploy workflow was ever confirmed to succeed on a real VPS. **Treat "app is live" as unconfirmed until checked.**
+All 6 phases (0–5) plus deployment infrastructure are code-complete and deployed. **Production is live and verified:** `https://dastiyab.jsoftsol.com/` returns `200 OK` (Next.js/Cloudflare headers confirmed), and the `Deploy` GitHub Actions workflow (triggers on push to `deploy`) has succeeded on every run since the initial fixes on 2026-06-12 — most recently 2026-08-10.
 
 All pages are wired to real PostgreSQL data:
 - Products list, product detail, categories, store shop — `GET /api/public/*`
@@ -55,15 +55,9 @@ All pages are wired to real PostgreSQL data:
 - Create Store — `POST /api/public/stores` (creates store, sets vendor role, signOut), `GET /api/customer/store`
 - CartSync hydrates Redux cart from DB on login
 
-**Immediate next step:** Decide whether to (a) verify/complete the VPS deploy (check GitHub Actions run history, confirm the app is actually reachable), or (b) start v2 features (Stripe, analytics, email notifications). Also resolve the housekeeping items below before further work.
+**Immediate next step:** All housekeeping from the 2026-08-11 session is resolved. Next up is a product decision, not a fix: start v2 features (Stripe, analytics, email notifications), or do manual end-to-end QA on the live production app first.
 
-**Housekeeping — untracked files as of 2026-08-11 (not yet committed, not previously documented):**
-- `LICENSE.md`, `CODE_OF_CONDUCT.md` — added, presumably repo open-source prep; not yet committed
-- `docker-compose.yml` (project root) — new local-dev Postgres compose file (separate from `docker-compose.prod.yml`); now documented in `CLAUDE.md`
-- `tailadmin/` — confirmed to be a reference clone of the upstream TailAdmin template (has its own nested `.git`), used to copy components from during Phase 2/3. Not part of the app, not deployed. Consider adding to `.gitignore` so it stops showing in `git status`.
-- `.gitignore` — modified to add `.env.production` and `GitHubSecrets.txt`, not yet committed
-
-**Auth is fully configured** — `.env.local` already has `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` set (the old "add these before testing" note is stale, removed).
+**Auth is fully configured** — `.env.local` already has `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` set.
 - To promote a user to admin: `UPDATE "User" SET role = 'admin' WHERE email = 'you@example.com';` then sign out/in
 
 **Node 24 switch (manual):** Run `nvm use 24` in your terminal — `.nvmrc` is set but nvm-windows doesn't auto-switch.
@@ -72,13 +66,21 @@ All pages are wired to real PostgreSQL data:
 
 ## 2026-08-11 Session
 
-Documentation-only session, no app code touched. Triggered by the docs having drifted from reality after the 2-month gap since the last commit.
+Documentation, repo hygiene, and deploy-verification session — no app feature code touched. Triggered by the docs having drifted from reality after a ~2 month gap with no commits since 2026-06-12.
 
-Corrections made:
+**Doc corrections** (`825196b`):
 - `CLAUDE.md` said `sign-in/` was a Clerk page (stale — Phase 0 migrated to Auth.js) and described admin/vendor mutations as `/api/admin/*` / `/api/store/*` REST routes (wrong — they're Server Actions in `app/admin/actions.js` / `app/store/actions.js`; no such REST routes exist). Both fixed.
 - `CLAUDE.md` Build Phases list was missing Phase 0 (Auth Migration) and Phase 6 (Deployment) — added.
-- `docs/PRD.md` listed "VPS/production deployment configuration" under **Out of Scope (v1)**, but deployment infrastructure was actually built in a later session — moved to a Phase 6 entry and removed from out-of-scope (see PRD's own note on this).
+- `docs/PRD.md` listed "VPS/production deployment configuration" under **Out of Scope (v1)**, but deployment infrastructure was actually built in a later session — moved to a Phase 6 entry and removed from out-of-scope.
 - Added an explicit "Saving Progress" protocol to `CLAUDE.md` (documented-convention approach, no hooks) so future sessions update `CONTEXT.md`/`PRD.md` reliably instead of drifting again.
+
+**Git history rewrite:** at the user's request, stripped `Co-Authored-By: Claude...` trailers from all 112 commits on `master` and 110 on `deploy` using `git-filter-repo` (`--refs master deploy`, message-callback), then force-pushed both branches to `origin`. Commit SHAs from `6c35d7a` (2026-06-12) onward all changed as a result — a pre-rewrite bundle backup exists at the user's scratchpad path from that session if the old hashes are ever needed. Future commits in this repo should not include the trailer.
+
+**Repo housekeeping** (`749d9c1`, `fbaefa7`): committed `docker-compose.yml` (local dev Postgres, already referenced in `CLAUDE.md`); gitignored `tailadmin/` (confirmed reference clone of the upstream TailAdmin template, not part of the app); added `LICENSE.md` (MIT) and `CODE_OF_CONDUCT.md` (Contributor Covenant) — both originally carried the upstream template author's ("GreatStackDev") copyright/contact and were corrected to the actual project owner (Ammad Sarfraz) before committing.
+
+**GitHub repo metadata:** set the About panel — description, homepage (`https://dastiyab.jsoftsol.com/`), and topics (`ecommerce`, `marketplace`, `multi-vendor`, `nextauth`, `nextjs`, `nodejs`, `postgresql`, `prisma`, `react`, `tailwindcss`).
+
+**Deploy verification:** confirmed via `gh run list` and a direct `curl` that production is live and the workflow is healthy (see "Where We Left Off" above).
 
 ---
 
@@ -281,8 +283,8 @@ app/store/edit-product/[id]/  EditProductClient.jsx
 
 ## Key Conventions (enforced in CLAUDE.md)
 
-- Vendor API routes (`/api/store/*`) derive `storeId` from the session — never accept it from request body
-- All admin/vendor API routes verify role server-side via `requireAdmin()` / `requireVendor()` from `lib/auth.js`
+- Admin/vendor mutations are Server Actions (`app/admin/actions.js`, `app/store/actions.js`), not REST routes — vendor actions derive `storeId` from the session, never from client input
+- All admin/vendor Server Actions and `/api/customer/*` routes verify role server-side via `requireAdmin()` / `requireVendor()` from `lib/auth.js`
 - Use `lib/prisma.js` singleton — never `new PrismaClient()` in a route handler
 - Shared UI primitives live in `components/admin/ui/` — used by both admin and vendor zones
 - COD only — no Stripe code
@@ -316,3 +318,5 @@ Also update `docs/PRD.md` if the session changed product scope (a feature moved 
 | Prisma 7 driver adapter | Required by Prisma 7 — `@prisma/adapter-pg` replaces built-in driver |
 | Node 24 | Active LTS (Node 22 entered Maintenance LTS April 2026) |
 | `"type": "module"` | Required by Prisma 7 generated client; all files already used ESM syntax |
+| MIT license, Contributor Covenant CoC | Repo made public; both attributed to Ammad Sarfraz (2026-08-11), replacing the upstream tutorial template's own attribution |
+| No `Co-Authored-By: Claude` trailer in commits | User preference (2026-08-11) — full history rewritten to remove it, future commits omit it |

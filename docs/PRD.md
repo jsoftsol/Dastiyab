@@ -80,7 +80,7 @@ The GoCart operator. Responsible for approving new stores, managing platform-wid
 - Multi-stage Dockerfile (Node 24 alpine, Next.js standalone output)
 - `docker-compose.prod.yml` — postgres + app + one-shot migrate services
 - GitHub Actions workflow: push to `deploy` branch → rsync → SSH → build & run
-- **Note:** built after this PRD's original "Out of Scope" list was written (see below) — added because the team decided to self-host on a VPS rather than defer deployment past v1. Production deploy has not been verified as reachable as of 2026-08-11; treat as code-complete, not confirmed-live.
+- **Note:** built after this PRD's original "Out of Scope" list was written (see below) — added because the team decided to self-host on a VPS rather than defer deployment past v1. Production is live at `https://dastiyab.jsoftsol.com/`, confirmed reachable and the deploy workflow green as of 2026-08-11.
 
 ---
 
