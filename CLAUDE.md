@@ -2,13 +2,16 @@
 
 ## Session Start
 
-**Always read `CONTEXT.md` first**, then skim `docs/PRD.md` if the task touches product scope. `CONTEXT.md` contains the current phase status, what's been built, where we left off, and the immediate next step — this replaces reading individual source files to orient yourself. `docs/PRD.md` contains the product requirements and phase-by-phase feature scope.
+**Always read `CONTEXT.md` first**, then skim `docs/PRD.md` if the task touches product scope, then check `docs/AGENT_NOTES.md`. `CONTEXT.md` contains the current phase status, what's been built, where we left off, and the immediate next step — this replaces reading individual source files to orient yourself. `docs/PRD.md` contains the product requirements and phase-by-phase feature scope. `docs/AGENT_NOTES.md` is a repo-local, git-tracked replacement for Claude Code's global auto-memory system for this project — durable feedback and project facts that don't fit the other docs.
+
+**Do not use Claude Code's global auto-memory system (`~/.claude/projects/.../memory/`) for this project** — everything persistent must live inside the repo (`docs/AGENT_NOTES.md`, `CONTEXT.md`, `docs/PRD.md`, this file). User preference (2026-08-11): nothing saved globally, everything local and committed to git.
 
 ## Saving Progress (do this before ending a session that changed project state)
 
 - **`CONTEXT.md`** — update after any session that changes what's built, deployed, or left off: phase status, "Where We Left Off", "Last session ended" line (use the real current date), and "Current Codebase State". This is the single most important file to keep current — treat a session that changes code without updating it as unfinished.
 - **`docs/PRD.md`** — update only when product scope itself changes: a feature moves in/out of v1, a phase's requirements change, target users or success criteria shift. Don't touch it for implementation-detail changes.
 - **`CLAUDE.md`** (this file) — update when a *convention* changes: new route zone, new required env var, a constraint gets lifted, tech stack swap. Don't restate what CONTEXT.md already tracks (phase status, session history).
+- **`docs/AGENT_NOTES.md`** — update with anything that would otherwise be an auto-memory entry: corrections/confirmations about how to work in this repo, and project facts not derivable from code or git history (e.g. deploy verification status).
 
 ## Project Overview
 
