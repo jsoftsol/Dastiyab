@@ -45,3 +45,6 @@ next-env.d.ts
 
 .env.production
 GitHubSecrets.txt
+
+# reference clone of the upstream TailAdmin template — not part of the app
+/tailadmin
