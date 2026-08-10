@@ -1,6 +1,6 @@
 # GoCart — Product Requirements Document
 
-**Date:** 2026-06-11  
+**Date:** 2026-06-11 (last revised 2026-08-11)  
 **Status:** Active  
 **Vision:** A self-serve multi-vendor e-commerce marketplace (Shopify-like, long-term)
 
@@ -36,8 +36,13 @@ The GoCart operator. Responsible for approving new stores, managing platform-wid
 
 ## Features by Phase
 
+### Phase 0 — Auth Migration
+- Replaced Clerk with Auth.js v5 (`next-auth@beta`) + Prisma adapter, self-hosted, no third-party auth dependency
+- Google OAuth + email/password (credentials) providers
+- Custom sign-in page, JWT session strategy, role stored on `User.role`
+
 ### Phase 1 — Foundation
-- Clerk authentication with 3 roles: admin, vendor, customer
+- Authentication with 3 roles: admin, vendor, customer (see Phase 0)
 - PostgreSQL database with Prisma ORM
 - Route protection middleware (admin and vendor zones locked)
 - Cloudinary account configured for image uploads
@@ -71,6 +76,12 @@ The GoCart operator. Responsible for approving new stores, managing platform-wid
 - Coupon validation at checkout (expiry, new user, member flags)
 - Product ratings (only after a DELIVERED order)
 
+### Phase 6 — Deployment
+- Multi-stage Dockerfile (Node 24 alpine, Next.js standalone output)
+- `docker-compose.prod.yml` — postgres + app + one-shot migrate services
+- GitHub Actions workflow: push to `deploy` branch → rsync → SSH → build & run
+- **Note:** built after this PRD's original "Out of Scope" list was written (see below) — added because the team decided to self-host on a VPS rather than defer deployment past v1. Production deploy has not been verified as reachable as of 2026-08-11; treat as code-complete, not confirmed-live.
+
 ---
 
 ## Non-Functional Requirements
@@ -90,8 +101,9 @@ The GoCart operator. Responsible for approving new stores, managing platform-wid
 - Vendor analytics beyond basic stats
 - Multi-currency support
 - Mobile app
-- VPS/production deployment configuration
 - Multi-language / i18n
+
+> VPS/production deployment was originally listed here as out of scope, but was built anyway in a later session (see Phase 6 above) once the decision was made to self-host rather than defer it. Kept here as a note so the discrepancy isn't mysterious to a future reader.
 
 ---
 

@@ -38,14 +38,16 @@ Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors man
 | 4 | Public Storefront — wire existing pages to real API routes | ✅ Complete | `docs/superpowers/specs/2026-06-12-phase-4-public-storefront-design.md` |
 | 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | ✅ Complete | `docs/superpowers/specs/2026-06-12-phase-5-platform-services-design.md` |
 
-**Current phase:** Deployment — Docker + GitHub Actions CI/CD ✅ Complete  
-**Last session ended:** 2026-06-12 — Deployment infrastructure complete. Dockerfile (multi-stage, Node 24), docker-compose.prod.yml, GitHub Actions deploy workflow. Three build fixes applied. Also renamed `middleware.js` → `proxy.js` (Next.js 16 deprecated the middleware convention). Latest deploy branch: 502100b.
+**Current phase:** Deployment infra — Docker + GitHub Actions CI/CD ✅ Complete (code); **production deploy status unverified** — no commits or confirmation since 2026-06-12  
+**Last session ended:** 2026-08-11 — Documentation overhaul session (this session). No app code changed. Rewrote `CLAUDE.md`, `CONTEXT.md`, `docs/PRD.md` for accuracy and added an explicit save-progress protocol. See "2026-08-11 Session" below for details.
 
 ---
 
 ## Where We Left Off
 
-Phase 4 (Public Storefront) is complete. All pages are wired to real PostgreSQL data:
+All 6 phases (0–5) plus deployment infrastructure are code-complete as of 2026-06-12 (commit `8b2709a`). There is a ~2 month gap with no commits between then and this session (2026-08-11) — nothing indicates the deploy workflow was ever confirmed to succeed on a real VPS. **Treat "app is live" as unconfirmed until checked.**
+
+All pages are wired to real PostgreSQL data:
 - Products list, product detail, categories, store shop — `GET /api/public/*`
 - Cart persistence — `GET|PUT /api/customer/cart`, Redux + DB sync via `lib/syncCart.js`
 - Checkout — addresses (`GET|POST|DELETE /api/customer/addresses`), coupon validation, order placement (`POST /api/customer/orders`) with multi-store grouping in `$transaction`
@@ -53,13 +55,30 @@ Phase 4 (Public Storefront) is complete. All pages are wired to real PostgreSQL 
 - Create Store — `POST /api/public/stores` (creates store, sets vendor role, signOut), `GET /api/customer/store`
 - CartSync hydrates Redux cart from DB on login
 
-**Immediate next step:** All 5 phases complete + deployment infrastructure done. Monitor the GitHub Actions workflow for success after the latest push. Once the deploy workflow passes, the app is live on VPS. Next: manual end-to-end testing on production, or v2 features (Stripe, analytics, email notifications).
+**Immediate next step:** Decide whether to (a) verify/complete the VPS deploy (check GitHub Actions run history, confirm the app is actually reachable), or (b) start v2 features (Stripe, analytics, email notifications). Also resolve the housekeeping items below before further work.
 
-**Before manual testing of auth:** Add Google OAuth credentials to `.env.local`:
-- `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (from Google Cloud Console)
+**Housekeeping — untracked files as of 2026-08-11 (not yet committed, not previously documented):**
+- `LICENSE.md`, `CODE_OF_CONDUCT.md` — added, presumably repo open-source prep; not yet committed
+- `docker-compose.yml` (project root) — new local-dev Postgres compose file (separate from `docker-compose.prod.yml`); now documented in `CLAUDE.md`
+- `tailadmin/` — confirmed to be a reference clone of the upstream TailAdmin template (has its own nested `.git`), used to copy components from during Phase 2/3. Not part of the app, not deployed. Consider adding to `.gitignore` so it stops showing in `git status`.
+- `.gitignore` — modified to add `.env.production` and `GitHubSecrets.txt`, not yet committed
+
+**Auth is fully configured** — `.env.local` already has `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` set (the old "add these before testing" note is stale, removed).
 - To promote a user to admin: `UPDATE "User" SET role = 'admin' WHERE email = 'you@example.com';` then sign out/in
 
 **Node 24 switch (manual):** Run `nvm use 24` in your terminal — `.nvmrc` is set but nvm-windows doesn't auto-switch.
+
+---
+
+## 2026-08-11 Session
+
+Documentation-only session, no app code touched. Triggered by the docs having drifted from reality after the 2-month gap since the last commit.
+
+Corrections made:
+- `CLAUDE.md` said `sign-in/` was a Clerk page (stale — Phase 0 migrated to Auth.js) and described admin/vendor mutations as `/api/admin/*` / `/api/store/*` REST routes (wrong — they're Server Actions in `app/admin/actions.js` / `app/store/actions.js`; no such REST routes exist). Both fixed.
+- `CLAUDE.md` Build Phases list was missing Phase 0 (Auth Migration) and Phase 6 (Deployment) — added.
+- `docs/PRD.md` listed "VPS/production deployment configuration" under **Out of Scope (v1)**, but deployment infrastructure was actually built in a later session — moved to a Phase 6 entry and removed from out-of-scope (see PRD's own note on this).
+- Added an explicit "Saving Progress" protocol to `CLAUDE.md` (documented-convention approach, no hooks) so future sessions update `CONTEXT.md`/`PRD.md` reliably instead of drifting again.
 
 ---
 
@@ -137,7 +156,7 @@ Files added:
 - **Next.js 16.2.9** — server components + Server Actions pattern throughout admin + vendor panels
 - **Node 24** — `.nvmrc` set; run `nvm use 24` manually to switch
 - **`"type": "module"`** — full ESM
-- **`.env.local` needs `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`** for Google OAuth
+- **`.env.local` fully configured** — `DATABASE_URL`, `NEXTAUTH_URL`/`NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, Cloudinary vars, `NEXT_PUBLIC_CURRENCY_SYMBOL` all set
 
 ### Existing Route Zones
 
@@ -273,12 +292,14 @@ app/store/edit-product/[id]/  EditProductClient.jsx
 
 ## How to Update This File
 
-At the end of every session, update:
+At the end of every session that changes project state, update:
 1. **Phase status** — change 🔲 to 🔄 (in progress) or ✅ (complete)
 2. **Current phase** line
-3. **Last session ended** line with date and what was accomplished
+3. **Last session ended** line with the real current date and what was accomplished
 4. **Phase checklist** — check off completed tasks
 5. **Codebase state** — update what's no longer mocked/missing
+
+Also update `docs/PRD.md` if the session changed product scope (a feature moved in/out of v1, requirements shifted), and `CLAUDE.md` if it changed a convention (new route zone, new env var, lifted constraint). See `CLAUDE.md`'s "Saving Progress" section for the full split. Don't let this file, `CLAUDE.md`, and `docs/PRD.md` drift out of sync with each other or with the actual repo state — verify against `git log`/`git status` if it's been a while since the last update, the way the 2026-08-11 session did.
 
 ---
 
