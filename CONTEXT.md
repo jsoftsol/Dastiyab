@@ -39,7 +39,7 @@ Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors man
 | 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | ✅ Complete | `docs/superpowers/specs/2026-06-12-phase-5-platform-services-design.md` |
 
 **Current phase:** Deployment — Docker + GitHub Actions CI/CD ✅ Complete and **confirmed live**  
-**Last session ended:** 2026-08-11 — Documentation overhaul + repo housekeeping + deploy verification (this session, see "2026-08-11 Session" below).
+**Last session ended:** 2026-08-11 — Documentation overhaul + repo housekeeping + deploy verification, then a same-day follow-up replacing global auto-memory with a repo-local file (see "2026-08-11 Session" below).
 
 ---
 
@@ -81,6 +81,8 @@ Documentation, repo hygiene, and deploy-verification session — no app feature 
 **GitHub repo metadata:** set the About panel — description, homepage (`https://dastiyab.jsoftsol.com/`), and topics (`ecommerce`, `marketplace`, `multi-vendor`, `nextauth`, `nextjs`, `nodejs`, `postgresql`, `prisma`, `react`, `tailwindcss`).
 
 **Deploy verification:** confirmed via `gh run list` and a direct `curl` that production is live and the workflow is healthy (see "Where We Left Off" above).
+
+**Follow-up (same day) — global memory replaced with repo-local notes** (`4f32165`): user requested nothing be saved globally — everything persistent for this project must live inside the repo. Migrated the two existing entries from Claude Code's global auto-memory folder (`~/.claude/projects/D--Documents-Nextjs-Dastiyab/memory/`) into a new `docs/AGENT_NOTES.md` (no-Claude-coauthor commit rule, deploy status verification note), deleted the global files, and updated `CLAUDE.md`'s "Session Start" / "Saving Progress" sections to read/write `docs/AGENT_NOTES.md` instead. Going forward, session-start reading order is `CONTEXT.md` → `docs/PRD.md` (if scope-relevant) → `docs/AGENT_NOTES.md`. Pushed to `origin/master`.
 
 ---
 
