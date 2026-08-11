@@ -39,7 +39,7 @@ Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors man
 | 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | ✅ Complete | `docs/superpowers/specs/2026-06-12-phase-5-platform-services-design.md` |
 
 **Current phase:** Deployment — Docker + GitHub Actions CI/CD ✅ Complete and **confirmed live**  
-**Last session ended:** 2026-08-11 — Documentation overhaul + repo housekeeping + deploy verification, then two same-day follow-ups: replacing global auto-memory with a repo-local file, then wiring a `SessionStart` hook to auto-load `CONTEXT.md`/`docs/AGENT_NOTES.md` (see "2026-08-11 Session" below).
+**Last session ended:** 2026-08-11 — Documentation overhaul + repo housekeeping + deploy verification, then three same-day follow-ups: replacing global auto-memory with a repo-local file, wiring a `SessionStart` hook to auto-load `CONTEXT.md`/`docs/AGENT_NOTES.md`, and verifying no memory data remains outside the repo (see "2026-08-11 Session" below).
 
 ---
 
@@ -85,6 +85,8 @@ Documentation, repo hygiene, and deploy-verification session — no app feature 
 **Follow-up (same day) — global memory replaced with repo-local notes** (`4f32165`): user requested nothing be saved globally — everything persistent for this project must live inside the repo. Migrated the two existing entries from Claude Code's global auto-memory folder (`~/.claude/projects/D--Documents-Nextjs-Dastiyab/memory/`) into a new `docs/AGENT_NOTES.md` (no-Claude-coauthor commit rule, deploy status verification note), deleted the global files, and updated `CLAUDE.md`'s "Session Start" / "Saving Progress" sections to read/write `docs/AGENT_NOTES.md` instead. Going forward, session-start reading order is `CONTEXT.md` → `docs/PRD.md` (if scope-relevant) → `docs/AGENT_NOTES.md`. Pushed to `origin/master`.
 
 **Second follow-up (same day) — `SessionStart` hook auto-loads `CONTEXT.md` + `docs/AGENT_NOTES.md`:** user wanted the Session Start reading order enforced automatically instead of relying on the agent remembering the `CLAUDE.md` instructions each time. Added `.claude/hooks/session-start-context.mjs` (Node script — `jq` isn't installed in this environment's Git Bash) which reads both files and returns them as `hookSpecificOutput.additionalContext`, wired via a new committed `.claude/settings.json` (`SessionStart` hook, previously only `.claude/settings.local.json` existed). `docs/PRD.md` is deliberately not auto-injected — still read on demand per the existing "skim if task touches product scope" rule. Documented in `docs/AGENT_NOTES.md`. Caveat: since `.claude/settings.json` didn't exist when this session's file watcher started, one `/hooks` reload (or a session restart) may be needed before the hook actually fires. Committed as `ed40df2`, pushed to `origin/master`.
+
+**Third follow-up (same day) — verified no memory data remains outside the repo:** user asked to "remove memories from git." Checked both the repo (`git ls-files` / content grep for "memory") and the global auto-memory folder (`~/.claude/projects/D--Documents-Nextjs-Dastiyab/memory/`) — the global folder was already empty (cleared by the first follow-up above, `4f32165`), `.claude/` there isn't even a git repo, and nothing memory-related is tracked in this repo beyond the intentional `docs/AGENT_NOTES.md`/`CONTEXT.md` prose describing the migration. No files changed; this entry exists so a future session doesn't re-ask the same question.
 
 ---
 
