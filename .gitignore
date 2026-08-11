@@ -48,3 +48,6 @@ GitHubSecrets.txt
 
 # reference clone of the upstream TailAdmin template — not part of the app
 /tailadmin
+
+# personal Claude Code permission overrides — not a team-wide convention
+/.claude/settings.local.json

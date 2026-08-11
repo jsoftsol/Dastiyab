@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/session-start-context.mjs",
+            "shell": "bash",
+            "statusMessage": "Loading CONTEXT.md + AGENT_NOTES.md"
+          }
+        ]
+      }
+    ]
+  }
+}

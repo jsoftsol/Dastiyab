@@ -14,6 +14,14 @@ Do not add a `Co-Authored-By: Claude...` trailer to commits in the Dastiyab repo
 
 **How to apply:** When committing in this repo, omit the trailer entirely — treat it as a standing repo convention, not a one-time instruction.
 
+### CONTEXT.md + AGENT_NOTES.md auto-load via SessionStart hook
+
+`.claude/settings.json` runs `.claude/hooks/session-start-context.mjs` on `SessionStart`, which injects the full text of `CONTEXT.md` and this file into context automatically — no need to read them manually at session start anymore (`docs/PRD.md` is still read on demand only, per the existing "skim if task touches product scope" rule).
+
+**Why:** User asked (2026-08-11) for local project files to load automatically every session rather than relying on the agent remembering the "Session Start" instructions in `CLAUDE.md`. `jq` isn't available in this environment's Git Bash, so the hook is a small Node script instead.
+
+**How to apply:** If `CONTEXT.md` or `docs/AGENT_NOTES.md` get renamed/restructured, update `.claude/hooks/session-start-context.mjs` to match. If session context ever seems to be missing this injected block, check `/hooks` — a newly created `.claude/settings.json` may need one manual reload before the file watcher picks it up.
+
 ### Keep all durable notes local to this repo
 
 Don't write to the global Claude Code auto-memory folder (`~/.claude/projects/.../memory/`) for this project. Keep everything — feedback, project decisions, reference pointers — in this file instead.
