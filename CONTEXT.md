@@ -39,13 +39,13 @@ Dastiyab is a multi-vendor e-commerce marketplace (Next.js 16) where vendors man
 | 5 | Platform Services — coupon engine, ratings (Cloudinary already done in Phase 3) | ✅ Complete | `docs/superpowers/specs/2026-06-12-phase-5-platform-services-design.md` |
 
 **Current phase:** Deployment — Docker + GitHub Actions CI/CD ✅ Complete and **confirmed live**  
-**Last session ended:** 2026-08-11 — Documentation overhaul + repo housekeeping + deploy verification, then three same-day follow-ups: replacing global auto-memory with a repo-local file, wiring a `SessionStart` hook to auto-load `CONTEXT.md`/`docs/AGENT_NOTES.md`, and verifying no memory data remains outside the repo (see "2026-08-11 Session" below).
+**Last session ended:** 2026-08-11 — Documentation overhaul + repo housekeeping + deploy verification, then four same-day follow-ups: replacing global auto-memory with a repo-local file, wiring a `SessionStart` hook to auto-load `CONTEXT.md`/`docs/AGENT_NOTES.md`, verifying no memory data remains outside the repo, and adding the real site logo + deploying it to production (see "2026-08-11 Session" below).
 
 ---
 
 ## Where We Left Off
 
-All 6 phases (0–5) plus deployment infrastructure are code-complete and deployed. **Production is live and verified:** `https://dastiyab.jsoftsol.com/` returns `200 OK` (Next.js/Cloudflare headers confirmed), and the `Deploy` GitHub Actions workflow (triggers on push to `deploy`) has succeeded on every run since the initial fixes on 2026-06-12 — most recently 2026-08-10.
+All 6 phases (0–5) plus deployment infrastructure are code-complete and deployed. **Production is live and verified:** `https://dastiyab.jsoftsol.com/` returns `200 OK` (Next.js/Cloudflare headers confirmed), and the `Deploy` GitHub Actions workflow (triggers on push to `deploy`) has succeeded on every run since the initial fixes on 2026-06-12 — most recently 2026-08-11 (run `31516034577`, the real-logo deploy).
 
 All pages are wired to real PostgreSQL data:
 - Products list, product detail, categories, store shop — `GET /api/public/*`
@@ -55,7 +55,7 @@ All pages are wired to real PostgreSQL data:
 - Create Store — `POST /api/public/stores` (creates store, sets vendor role, signOut), `GET /api/customer/store`
 - CartSync hydrates Redux cart from DB on login
 
-**Immediate next step:** All housekeeping from the 2026-08-11 session is resolved. Next up is a product decision, not a fix: start v2 features (Stripe, analytics, email notifications), or do manual end-to-end QA on the live production app first.
+**Immediate next step:** All housekeeping from the 2026-08-11 session is resolved, and the real Dastiyab logo is live in production. Next up is a product decision, not a fix: start v2 features (Stripe, analytics, email notifications), or do manual end-to-end QA on the live production app first.
 
 **Auth is fully configured** — `.env.local` already has `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` set.
 - To promote a user to admin: `UPDATE "User" SET role = 'admin' WHERE email = 'you@example.com';` then sign out/in
@@ -87,6 +87,10 @@ Documentation, repo hygiene, and deploy-verification session — no app feature 
 **Second follow-up (same day) — `SessionStart` hook auto-loads `CONTEXT.md` + `docs/AGENT_NOTES.md`:** user wanted the Session Start reading order enforced automatically instead of relying on the agent remembering the `CLAUDE.md` instructions each time. Added `.claude/hooks/session-start-context.mjs` (Node script — `jq` isn't installed in this environment's Git Bash) which reads both files and returns them as `hookSpecificOutput.additionalContext`, wired via a new committed `.claude/settings.json` (`SessionStart` hook, previously only `.claude/settings.local.json` existed). `docs/PRD.md` is deliberately not auto-injected — still read on demand per the existing "skim if task touches product scope" rule. Documented in `docs/AGENT_NOTES.md`. Caveat: since `.claude/settings.json` didn't exist when this session's file watcher started, one `/hooks` reload (or a session restart) may be needed before the hook actually fires. Committed as `ed40df2`, pushed to `origin/master`.
 
 **Third follow-up (same day) — verified no memory data remains outside the repo:** user asked to "remove memories from git." Checked both the repo (`git ls-files` / content grep for "memory") and the global auto-memory folder (`~/.claude/projects/D--Documents-Nextjs-Dastiyab/memory/`) — the global folder was already empty (cleared by the first follow-up above, `4f32165`), `.claude/` there isn't even a git repo, and nothing memory-related is tracked in this repo beyond the intentional `docs/AGENT_NOTES.md`/`CONTEXT.md` prose describing the migration. No files changed; this entry exists so a future session doesn't re-ask the same question.
+
+**Fourth follow-up (same day) — real site logo added and deployed to production:** user supplied `logo.png` (Dastiyab wordmark) in the repo root. Moved it to `public/logo.png` and swapped it in for the leftover template-era text wordmarks in `components/Navbar.jsx` (was "gocart.", plus a stray "plus" badge — both removed) and `components/Footer.jsx` (was "dastiyab."). `assets/assets.js`'s `gs_logo` and the admin/vendor sidebar images were deliberately left alone — those render the logged-in user's/store's own avatar, not the site brand.
+
+Committed this as `2d2bb20`, which — despite the standing no-trailer convention below — was pushed with a `Co-Authored-By: Claude` trailer by mistake. Caught by the user, fixed by amending the commit locally (new hash `d9e92b9`), fast-forwarding `deploy` to it, and pushing `deploy` (a genuine fast-forward, not a force-push — this also served the user's "deploy this to the server" request and triggered `Deploy` run `31516034577`, which succeeded). `master`, however, had already diverged from `origin/master` at that point, and moving it to the fixed history needs `--force-with-lease`; per standing safety policy the agent does not force-push `main`/`master` itself even on direct request, so the user ran `git push --force-with-lease origin master` manually. `master`, `origin/master`, and `origin/deploy` all now point to `d9e92b9`. Production verified live at `https://dastiyab.jsoftsol.com/` (`200 OK`) after the deploy.
 
 ---
 

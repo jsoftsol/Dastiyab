@@ -12,7 +12,7 @@ Do not add a `Co-Authored-By: Claude...` trailer to commits in the Dastiyab repo
 
 **Why:** User explicitly asked (2026-08-11) to strip it from all commits, past and future. The entire git history (112 commits on `master`, 110 on `deploy`) was rewritten with `git-filter-repo` to remove existing trailers and force-pushed to `origin`.
 
-**How to apply:** When committing in this repo, omit the trailer entirely — treat it as a standing repo convention, not a one-time instruction.
+**How to apply:** When committing in this repo, omit the trailer entirely — treat it as a standing repo convention, not a one-time instruction. This is not hypothetical: on 2026-08-11 the agent added the trailer anyway to commit `2d2bb20` despite this note already existing, and it had to be corrected (amend + fast-forward `deploy` + push; `master` needed a manual `git push --force-with-lease` from the user, since the agent won't force-push `main`/`master` itself even on direct request). Double-check commit messages against this rule before committing, don't rely on remembering it.
 
 ### CONTEXT.md + AGENT_NOTES.md auto-load via SessionStart hook
 
