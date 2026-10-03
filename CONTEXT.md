@@ -55,7 +55,7 @@ All pages are wired to real PostgreSQL data:
 - Create Store — `POST /api/public/stores` (creates store, sets vendor role, signOut), `GET /api/customer/store`
 - CartSync hydrates Redux cart from DB on login
 
-**Immediate next step:** All housekeeping from the 2026-08-11 session is resolved, and the real Dastiyab logo is live in production. Next up is a product decision, not a fix: start v2 features (Stripe, analytics, email notifications), or do manual end-to-end QA on the live production app first.
+**Immediate next step:** All housekeeping from the 2026-08-11 and 2026-10-04 sessions is resolved, and the real Dastiyab logo is live in production. Next up is a product decision, not a fix: start v2 features (Stripe, analytics, email notifications), or do manual end-to-end QA on the live production app first.
 
 **Auth is fully configured** — `.env.local` already has `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` set.
 - To promote a user to admin: `UPDATE "User" SET role = 'admin' WHERE email = 'you@example.com';` then sign out/in
@@ -63,6 +63,15 @@ All pages are wired to real PostgreSQL data:
 **Node 24 switch (manual):** Run `nvm use 24` in your terminal — `.nvmrc` is set but nvm-windows doesn't auto-switch.
 
 ---
+
+## 2026-10-04 Session
+
+Portfolio-repo maintenance across all `jsoftsol` showcase repos (not just this one), triggered by GitHub's repo-page "Contributors" sidebar showing a stale second contributor (`claude`), left over from a `Co-Authored-By: Claude` trailer that had already been removed from commit history. No app feature code touched.
+
+- **Em dashes removed from README.md** (48 occurrences, including 6 inside code-block comments that needed a second pass since the first automated pass correctly left code blocks alone per instructions, but these were explanatory prose, not literal syntax). Zero remain, per the user's global "never use em dashes" writing-style rule.
+- **Stale contributor cache:** confirmed via `git log` and the GitHub API that the real commit history only ever had one author (`asyousufzai`); the "2 contributors" was purely a GitHub-side cache that did not clear even ~2 months after the offending trailer was stripped from history, well past GitHub's documented ~24h window, and pushing new commits didn't clear it either. The only fix that worked: delete the GitHub repo and recreate it under the identical `jsoftsol/Dastiyab` name (same URL, verified both `master` and `deploy` branches came back correctly).
+- **Deploy secrets wiped by the recreation, found out the hard way:** deleting a GitHub repo wipes its Actions secrets. The push to `deploy` right after recreation triggered `Deploy` and it failed in 14s (missing `SERVER_HOST`/`SERVER_USER`/`SERVER_SSH_KEY`/`SERVER_APP_DIR`/`PRODUCTION_ENV`). The live site itself was never touched (the failed run never reached the server), but auto-deploy was broken until the user manually re-added all 5 secrets via GitHub Settings, confirmed present afterward via `gh secret list`. **Lesson for next time a repo needs recreating: check for `.github/workflows/*.yml` using `secrets.*` first, and warn before deleting, not after.**
+- Repo description (GitHub About panel) also had an em dash; fixed to match the README rule when metadata was restored post-recreation.
 
 ## 2026-08-11 Session
 
@@ -331,3 +340,4 @@ Also update `docs/PRD.md` if the session changed product scope (a feature moved 
 | `"type": "module"` | Required by Prisma 7 generated client; all files already used ESM syntax |
 | MIT license, Contributor Covenant CoC | Repo made public; both attributed to Ammad Sarfraz (2026-08-11), replacing the upstream tutorial template's own attribution |
 | No `Co-Authored-By: Claude` trailer in commits | User preference (2026-08-11) — full history rewritten to remove it, future commits omit it |
+| Delete + recreate the GitHub repo to clear a stale "Contributors" cache | Confirmed (2026-10-04) it's the only reliable fix; pushing new commits and waiting past the documented ~24h window did not clear it. Trade-off: wipes Actions secrets, so re-check deploy workflows before doing this again |
