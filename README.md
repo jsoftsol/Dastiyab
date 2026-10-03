@@ -1,8 +1,8 @@
-# Dastiyab — Multi-Vendor E-Commerce Platform
+# Dastiyab: Multi-Vendor E-Commerce Platform
 
-A production-grade, multi-tenant marketplace built with Next.js 16. Vendors self-onboard and manage independent storefronts; customers browse, place orders, and track deliveries; admins govern the entire platform — all from a single codebase.
+A production-grade, multi-tenant marketplace built with Next.js 16. Vendors self-onboard and manage independent storefronts; customers browse, place orders, and track deliveries; admins govern the entire platform, all from a single codebase.
 
-> Think Shopify meets a regional marketplace — built ground-up on a modern React/Node stack.
+> Think Shopify meets a regional marketplace, built ground-up on a modern React/Node stack.
 
 ---
 
@@ -25,7 +25,7 @@ A production-grade, multi-tenant marketplace built with Next.js 16. Vendors self
 └─────────────────────────────────────────────────────────┘
 ```
 
-Three fully isolated role zones share one PostgreSQL schema and one deployment. Server Components handle all data fetching; Server Actions handle all mutations — zero REST endpoints in the admin/vendor layer.
+Three fully isolated role zones share one PostgreSQL schema and one deployment. Server Components handle all data fetching; Server Actions handle all mutations: zero REST endpoints in the admin/vendor layer.
 
 ---
 
@@ -41,7 +41,7 @@ Three fully isolated role zones share one PostgreSQL schema and one deployment. 
 | ORM | Prisma 7 + `@prisma/adapter-pg` | Driver-adapter pattern; generated client in `prisma/generated/` |
 | Database | PostgreSQL | Docker locally; any VPS Postgres in production |
 | Image CDN | Cloudinary | Vendor product images; auth-gated upload endpoint |
-| State (client) | Redux Toolkit | Cart, address, ratings — client-only slices |
+| State (client) | Redux Toolkit | Cart, address, ratings: client-only slices |
 | Testing | Vitest | 120 tests across 15 suites; unit + integration |
 
 ---
@@ -51,30 +51,30 @@ Three fully isolated role zones share one PostgreSQL schema and one deployment. 
 ### Customer Storefront
 - Product catalog with category filtering, search, and infinite scroll
 - Product detail pages with image gallery and computed star ratings
-- Persistent cart (Redux + DB sync — hydrates on login)
+- Persistent cart (Redux + DB sync, hydrates on login)
 - Checkout with saved delivery addresses and coupon validation
 - COD order placement and live order status tracking
 - Individual vendor store profile pages
 
 ### Vendor Dashboard
 - Self-serve store creation and onboarding flow
-- Product management — create, edit, delete, toggle stock availability
+- Product management: create, edit, delete, toggle stock availability
 - Up to 4 Cloudinary-hosted product images per listing
 - Order management with status progression (Placed → Processing → Shipped → Delivered)
 - Revenue dashboard: earnings summary, product counts, recent customer ratings
 
 ### Admin Panel
 - Platform KPIs: order volume, GMV, user counts, pending approvals
-- Store approval workflow — approve or reject vendor applications
-- Store activation toggle — suspend a live store instantly
+- Store approval workflow: approve or reject vendor applications
+- Store activation toggle: suspend a live store instantly
 - User directory and role inspection
-- Coupon engine — percentage-off codes with expiry, audience targeting (new user / member / public)
+- Coupon engine: percentage-off codes with expiry, audience targeting (new user / member / public)
 - Cross-platform order management and status overrides
 
 ### Platform-Wide
 - Role-based access control enforced at the Edge (Next.js middleware) and server (`lib/auth.js` helpers)
-- All vendor data strictly scoped to session — `storeId` is always derived server-side, never accepted from the client
-- Shared Prisma singleton — no `new PrismaClient()` in route handlers
+- All vendor data strictly scoped to session: `storeId` is always derived server-side, never accepted from the client
+- Shared Prisma singleton: no `new PrismaClient()` in route handlers
 - Cloudinary upload endpoint auth-gated to `vendor` and `admin` roles
 - Coupon validation enforces isPublic / forMember / forNewUser flags at both validate and order-placement endpoints
 
@@ -92,16 +92,16 @@ Product ──< Rating
 User ──< Rating
 User ──< Address
 Order >── Address
-Coupon (standalone — validated at checkout)
+Coupon (standalone, validated at checkout)
 Auth.js: Account, Session, VerificationToken
 ```
 
 Selected schema decisions:
 
-- `User.role` (`customer` | `vendor` | `admin`) — single source of truth for RBAC, checked server-side on every protected route
-- `Store.status` (`pending` | `approved` | `rejected`) + `Store.isActive` — two-gate model separating onboarding approval from runtime suspension
-- `Order.coupon Json` — coupon snapshot embedded at order time, immune to future edits or deletions
-- `User.cart Json` — server-side cart fallback alongside Redux client state
+- `User.role` (`customer` | `vendor` | `admin`): single source of truth for RBAC, checked server-side on every protected route
+- `Store.status` (`pending` | `approved` | `rejected`) + `Store.isActive`: two-gate model separating onboarding approval from runtime suspension
+- `Order.coupon Json`: coupon snapshot embedded at order time, immune to future edits or deletions
+- `User.cart Json`: server-side cart fallback alongside Redux client state
 
 ---
 
@@ -109,10 +109,10 @@ Selected schema decisions:
 
 ```
 app/
-  (public)/         customer storefront — home, shop, product, cart, orders, create-store
-  admin/            admin panel — dashboard, stores, approve, coupons, orders, users
+  (public)/         customer storefront: home, shop, product, cart, orders, create-store
+  admin/            admin panel: dashboard, stores, approve, coupons, orders, users
     actions.js      all admin Server Actions (requireAdmin guard)
-  store/            vendor dashboard — dashboard, add/edit/manage products, orders
+  store/            vendor dashboard: dashboard, add/edit/manage products, orders
     actions.js      all vendor Server Actions (requireVendor + ownership check)
   api/
     auth/           Auth.js handler + registration endpoint
@@ -136,7 +136,7 @@ lib/
 
 prisma/
   schema.prisma     canonical DB schema
-  generated/        Prisma 7 generated client — do not edit
+  generated/        Prisma 7 generated client, do not edit
   migrations/       SQL migration files
 
 __tests__/          Vitest test suites (120 tests, 15 files)
@@ -154,7 +154,7 @@ docs/               PRD, technical specs, implementation plans
 - Cloudinary account (free tier sufficient)
 - Google Cloud project with OAuth 2.0 credentials
 
-### 1 — Clone and install
+### 1: Clone and install
 
 ```bash
 git clone https://github.com/jsoftsol/Dastiyab.git
@@ -162,13 +162,13 @@ cd Dastiyab
 npm install
 ```
 
-### 2 — Start PostgreSQL
+### 2: Start PostgreSQL
 
 ```bash
 docker compose up -d
 ```
 
-### 3 — Environment variables
+### 3: Environment variables
 
 Copy `.env.example` to `.env.local` and populate:
 
@@ -176,7 +176,7 @@ Copy `.env.example` to `.env.local` and populate:
 DATABASE_URL=postgresql://user:password@localhost:5432/dastiyab
 
 NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=<32-char random string — openssl rand -base64 32>
+NEXTAUTH_SECRET=<32-char random string, generate with: openssl rand -base64 32>
 
 GOOGLE_CLIENT_ID=<from Google Cloud Console>
 GOOGLE_CLIENT_SECRET=<from Google Cloud Console>
@@ -186,20 +186,20 @@ CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
 ```
 
-### 4 — Push the schema and generate the Prisma client
+### 4: Push the schema and generate the Prisma client
 
 ```bash
 npx prisma db push
 npx prisma generate
 ```
 
-### 5 — Run
+### 5: Run
 
 ```bash
 npm run dev      # Turbopack dev server → http://localhost:3000
 ```
 
-### 6 — Promote your account to admin
+### 6: Promote your account to admin
 
 Sign in once with your email, then run:
 
@@ -207,7 +207,7 @@ Sign in once with your email, then run:
 UPDATE "User" SET role = 'admin' WHERE email = 'you@example.com';
 ```
 
-Sign out and back in — you'll be routed to `/admin`.
+Sign out and back in; you'll be routed to `/admin`.
 
 ---
 
@@ -215,8 +215,8 @@ Sign out and back in — you'll be routed to `/admin`.
 
 ### Customer
 
-1. Go to `/sign-in` — register with email/password or sign in with Google.
-2. Browse products at `/shop` — filter by category, search by name.
+1. Go to `/sign-in`: register with email/password or sign in with Google.
+2. Browse products at `/shop`: filter by category, search by name.
 3. Open a product to view details, images, and ratings; add it to your cart.
 4. Go to `/cart` to review items, then proceed to checkout.
 5. At checkout: add a delivery address, optionally apply a coupon code, and place a COD order.
@@ -228,9 +228,9 @@ Sign out and back in — you'll be routed to `/admin`.
 
 **Create a store**
 
-1. Sign in (any account — customer role is the default).
+1. Sign in (any account, customer role is the default).
 2. Go to `/create-store` and fill out the store form (name, description, etc.).
-3. Submit — the platform creates your store, upgrades your role to `vendor`, and signs you out automatically.
+3. Submit: the platform creates your store, upgrades your role to `vendor`, and signs you out automatically.
 4. Sign back in; you'll now have access to the vendor dashboard at `/store`.
 
 **Manage your store**
@@ -264,14 +264,14 @@ docker exec -it gocart_db psql -U postgres -d gocart \
   -c "UPDATE \"User\" SET role = 'admin' WHERE email = 'you@example.com';"
 ```
 
-3. Sign out and sign back in — the JWT is refreshed with the new role.
+3. Sign out and sign back in; the JWT is refreshed with the new role.
 4. Go to `/admin`.
 
 **Admin capabilities**
 
 | Page | Path | What you can do |
 |------|------|-----------------|
-| Dashboard | `/admin` | Platform KPIs — orders, GMV, user count, pending approvals |
+| Dashboard | `/admin` | Platform KPIs: orders, GMV, user count, pending approvals |
 | Stores | `/admin/stores` | Toggle any store active / inactive |
 | Approve | `/admin/approve` | Approve or reject pending vendor applications |
 | Coupons | `/admin/coupons` | Create and delete coupon codes (percentage-off, expiry, audience targeting) |
@@ -295,12 +295,12 @@ npm run test:watch   # watch mode
 | lib/prisma | 2 | singleton behaviour |
 | api/register | 4 | registration endpoint, validation, duplicate email |
 | api/upload | 3 | Cloudinary endpoint, auth guards |
-| admin/actions | 12 | 5 admin Server Actions — auth, enum validation, DB calls |
-| store/actions | 15 | 5 vendor Server Actions — auth, ownership enforcement |
+| admin/actions | 12 | 5 admin Server Actions: auth, enum validation, DB calls |
+| store/actions | 15 | 5 vendor Server Actions: auth, ownership enforcement |
 | api/public/products | 8 | list with filters/pagination, detail with ratings |
 | api/public/categories | 3 | distinct category list |
 | api/public/stores | 6 | store lookup, store creation, vendor role update |
-| api/public/coupons | 8 | validate endpoint — expiry, audience flags, auth-aware |
+| api/public/coupons | 8 | validate endpoint: expiry, audience flags, auth-aware |
 | api/customer/cart | 4 | GET (unauthed returns empty), PUT validation |
 | api/customer/addresses | 8 | CRUD, ownership check on DELETE |
 | api/customer/orders | 7 | multi-store transaction, address ownership, server-side prices |
@@ -321,7 +321,7 @@ docker compose -f docker-compose.prod.yml up -d
 
 The `Dockerfile` uses three stages: `deps` (install), `builder` (Next.js build + `prisma generate`), `runner` (minimal production image). Next.js standalone output is used for a lean container.
 
-### CI/CD — GitHub Actions
+### CI/CD: GitHub Actions
 
 Push to the `deploy` branch triggers `.github/workflows/deploy.yml`:
 
@@ -343,13 +343,13 @@ Push to the `deploy` branch triggers `.github/workflows/deploy.yml`:
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| 0 | Auth migration — Clerk → Auth.js v5 + Prisma adapter | Complete |
-| 1 | Foundation — PostgreSQL, Prisma 7, Cloudinary, middleware | Complete |
-| 2 | Admin Panel — TailAdmin UI + 6 pages + Server Actions | Complete |
-| 3 | Vendor Dashboard — 5 pages + Cloudinary upload + Server Actions | Complete |
-| 4 | Public Storefront — wire existing pages to real Prisma data | Complete |
-| 5 | Platform Services — coupon engine, product ratings | Complete |
-| — | Deployment — Docker, docker-compose.prod.yml, GitHub Actions CI/CD | Complete |
+| 0 | Auth migration: Clerk → Auth.js v5 + Prisma adapter | Complete |
+| 1 | Foundation: PostgreSQL, Prisma 7, Cloudinary, middleware | Complete |
+| 2 | Admin Panel: TailAdmin UI + 6 pages + Server Actions | Complete |
+| 3 | Vendor Dashboard: 5 pages + Cloudinary upload + Server Actions | Complete |
+| 4 | Public Storefront: wire existing pages to real Prisma data | Complete |
+| 5 | Platform Services: coupon engine, product ratings | Complete |
+| - | Deployment: Docker, docker-compose.prod.yml, GitHub Actions CI/CD | Complete |
 
 ---
 
@@ -362,7 +362,7 @@ Keeps auth checks co-located with the mutation, eliminates a client/server seria
 Full ownership of the token shape and session callbacks, no third-party dependency, and clean self-hosting. JWT strategy avoids a session-table lookup on every request. Credentials + Google in a single config keeps onboarding flexible without managing two separate auth systems.
 
 **Prisma 7 driver adapter (`@prisma/adapter-pg`).**
-The Prisma 7 mandated pattern for direct PostgreSQL connections. The generated client lives at `prisma/generated/prisma/` — outside `node_modules` — making artefacts explicit, auditable, and version-controlled.
+The Prisma 7 mandated pattern for direct PostgreSQL connections. The generated client lives at `prisma/generated/prisma/` (outside `node_modules`), making artefacts explicit, auditable, and version-controlled.
 
 **PostgreSQL over a managed database service.**
 Direct connection keeps the local dev loop fast and removes a managed-DB dependency. The same schema deploys unchanged to any VPS Postgres instance, or migrates to RDS/Supabase with a connection string swap.
@@ -383,4 +383,4 @@ Pull requests are welcome. Please open an issue first to discuss substantial cha
 
 ## License
 
-MIT — see [LICENSE.md](./LICENSE.md).
+MIT: see [LICENSE.md](./LICENSE.md).
